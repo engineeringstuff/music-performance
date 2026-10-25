@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@theme {
+  --color-stage-950: #05070d;
+  --color-stage-900: #090d17;
+  --color-stage-800: #0f1524;
+  --color-stage-700: #182136;
+  --color-stage-500: #34425f;
+  --color-stage-300: #93a3c4;
+  --color-accent-300: #6ee7b7;
+  --color-accent-400: #34d399;
+  --color-accent-500: #10b981;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply min-h-screen bg-stage-950 text-slate-100 antialiased;
+    background-image:
+      radial-gradient(ellipse 70% 55% at 15% -10%, rgba(52, 211, 153, 0.16), transparent 70%),
+      radial-gradient(ellipse 55% 45% at 95% 0%, rgba(139, 92, 246, 0.14), transparent 70%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: rgba(52, 211, 153, 0.32);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-rise {
+    animation: rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .animate-pop {
+    animation: pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+  }
+
+  .animate-glow {
+    animation: glow 3.5s ease-in-out infinite;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.04);
+  }
+}

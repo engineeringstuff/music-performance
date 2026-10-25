@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Music Performance</title>
+  <rect width="64" height="64" rx="14" fill="#070a13" />
+  <path
+    d="M38 12v27.5a9.5 9.5 0 1 1-4-7.74V19l16-3v20.5a9.5 9.5 0 1 1-4-7.74V12.8z"
+    fill="#34d399"
+  />
+</svg>

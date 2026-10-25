@@ -147,3 +147,14 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Cloudflare
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# Local editor
+.DS_Store
+
+# Playwright artifacts
+.playwright/

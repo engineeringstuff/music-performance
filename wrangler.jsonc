@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "music-performance",
+  "account_id": "707690ff96207f8c8eeef44fb9995ac7",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-10-25",
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true
+}
