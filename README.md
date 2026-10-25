@@ -82,8 +82,7 @@ docs/          Architecture and phase design documents
 - [Architecture](docs/000.%20ARCHITECTURE.md)
 - [Original brief](docs/001.%20PROMPT.md)
 - [Track content guide](docs/002.%20TRACK-CONTENT.md)
-
-Phase design documents will be added as `docs/003. PHASE-1-DESIGN.md`, and so on.
+- [Phase 1 design](docs/003.%20PHASE-1-DESIGN.md)
 
 ## Licence
 
