@@ -24,6 +24,7 @@ export function SetupScreen({ onBack, onReady }: SetupScreenProps) {
     () => loadLastConfig()?.instrumentId ?? null,
   );
   const [trackId, setTrackId] = useState<string | null>(() => loadLastConfig()?.trackId ?? null);
+  const [guideEnabled, setGuideEnabled] = useState(false);
 
   const [tracks, setTracks] = useState<TrackSummary[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -53,6 +54,7 @@ export function SetupScreen({ onBack, onReady }: SetupScreenProps) {
 
   const instrument = instrumentId ? getInstrument(instrumentId) : undefined;
   const selectedTrack = tracks?.find((track) => track.id === trackId);
+  const hasGuide = Boolean(selectedTrack?.guideUrl);
   const canStart =
     name.trim().length > 0 && instrument !== undefined && selectedTrack !== undefined;
 
@@ -67,6 +69,7 @@ export function SetupScreen({ onBack, onReady }: SetupScreenProps) {
       instrumentId: instrument.id,
       trackId: selectedTrack.id,
       transposeSemitones: 0,
+      guideEnabled: hasGuide && guideEnabled,
     };
 
     saveProfile(config.playerName);
@@ -238,7 +241,9 @@ export function SetupScreen({ onBack, onReady }: SetupScreenProps) {
                         </span>
                       </div>
                       <p className="mt-1 text-sm text-stage-300">
-                        {track.artist} · {formatClock(track.durationSec)} · {track.licence}
+                        {track.artist} · {formatClock(track.durationSec)}
+                        {track.keySignature ? ` · ${track.keySignature}` : ""}
+                        {track.tempoBpm ? ` · ${track.tempoBpm} BPM` : ""} · {track.licence}
                       </p>
                     </div>
                     <span
@@ -258,6 +263,26 @@ export function SetupScreen({ onBack, onReady }: SetupScreenProps) {
             </div>
           )}
         </fieldset>
+
+        {hasGuide && (
+          <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={guideEnabled}
+                onChange={(event) => setGuideEnabled(event.target.checked)}
+                className="mt-1 h-4 w-4 shrink-0 accent-emerald-400"
+              />
+              <span>
+                <span className="text-sm font-medium text-slate-100">Play guide melody</span>
+                <span className="mt-1 block text-sm leading-relaxed text-stage-300">
+                  Quietly plays the target melody under the backing track. Leave it off for the
+                  cleanest score, or use it while learning the notes.
+                </span>
+              </span>
+            </label>
+          </section>
+        )}
 
         <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-6">
           <p className="text-sm text-stage-300">

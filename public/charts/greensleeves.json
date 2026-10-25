@@ -1,0 +1,369 @@
+{
+  "version": 1,
+  "trackId": "greensleeves",
+  "sourceInstrument": "vocals",
+  "tempoBpm": 150,
+  "keySignature": "A minor",
+  "notes": [
+    {
+      "startSec": 0,
+      "durationSec": 0.4,
+      "midi": 69
+    },
+    {
+      "startSec": 0.4,
+      "durationSec": 0.8,
+      "midi": 72
+    },
+    {
+      "startSec": 1.2,
+      "durationSec": 0.4,
+      "midi": 74
+    },
+    {
+      "startSec": 1.6,
+      "durationSec": 0.6,
+      "midi": 76
+    },
+    {
+      "startSec": 2.2,
+      "durationSec": 0.2,
+      "midi": 77
+    },
+    {
+      "startSec": 2.4,
+      "durationSec": 0.4,
+      "midi": 76
+    },
+    {
+      "startSec": 2.8,
+      "durationSec": 0.8,
+      "midi": 74
+    },
+    {
+      "startSec": 3.6,
+      "durationSec": 0.4,
+      "midi": 71
+    },
+    {
+      "startSec": 4,
+      "durationSec": 0.6,
+      "midi": 67
+    },
+    {
+      "startSec": 4.6,
+      "durationSec": 0.2,
+      "midi": 69
+    },
+    {
+      "startSec": 4.8,
+      "durationSec": 0.4,
+      "midi": 71
+    },
+    {
+      "startSec": 5.2,
+      "durationSec": 0.8,
+      "midi": 72
+    },
+    {
+      "startSec": 6,
+      "durationSec": 0.4,
+      "midi": 69
+    },
+    {
+      "startSec": 6.4,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 7,
+      "durationSec": 0.2,
+      "midi": 68
+    },
+    {
+      "startSec": 7.2,
+      "durationSec": 0.4,
+      "midi": 69
+    },
+    {
+      "startSec": 7.6,
+      "durationSec": 0.8,
+      "midi": 71
+    },
+    {
+      "startSec": 8.4,
+      "durationSec": 0.4,
+      "midi": 68
+    },
+    {
+      "startSec": 8.8,
+      "durationSec": 0.8,
+      "midi": 64
+    },
+    {
+      "startSec": 9.6,
+      "durationSec": 0.4,
+      "midi": 69
+    },
+    {
+      "startSec": 10,
+      "durationSec": 0.8,
+      "midi": 72
+    },
+    {
+      "startSec": 10.8,
+      "durationSec": 0.4,
+      "midi": 74
+    },
+    {
+      "startSec": 11.2,
+      "durationSec": 0.6,
+      "midi": 76
+    },
+    {
+      "startSec": 11.8,
+      "durationSec": 0.2,
+      "midi": 77
+    },
+    {
+      "startSec": 12,
+      "durationSec": 0.4,
+      "midi": 76
+    },
+    {
+      "startSec": 12.4,
+      "durationSec": 0.8,
+      "midi": 74
+    },
+    {
+      "startSec": 13.2,
+      "durationSec": 0.4,
+      "midi": 71
+    },
+    {
+      "startSec": 13.6,
+      "durationSec": 0.6,
+      "midi": 67
+    },
+    {
+      "startSec": 14.2,
+      "durationSec": 0.2,
+      "midi": 69
+    },
+    {
+      "startSec": 14.4,
+      "durationSec": 0.4,
+      "midi": 71
+    },
+    {
+      "startSec": 14.8,
+      "durationSec": 0.6,
+      "midi": 72
+    },
+    {
+      "startSec": 15.4,
+      "durationSec": 0.2,
+      "midi": 71
+    },
+    {
+      "startSec": 15.6,
+      "durationSec": 0.4,
+      "midi": 69
+    },
+    {
+      "startSec": 16,
+      "durationSec": 0.6,
+      "midi": 68
+    },
+    {
+      "startSec": 16.6,
+      "durationSec": 0.2,
+      "midi": 66
+    },
+    {
+      "startSec": 16.8,
+      "durationSec": 0.4,
+      "midi": 68
+    },
+    {
+      "startSec": 17.2,
+      "durationSec": 1.2,
+      "midi": 69
+    },
+    {
+      "startSec": 18.4,
+      "durationSec": 1.2,
+      "midi": 69
+    },
+    {
+      "startSec": 19.6,
+      "durationSec": 1.2,
+      "midi": 79
+    },
+    {
+      "startSec": 20.8,
+      "durationSec": 0.6,
+      "midi": 79
+    },
+    {
+      "startSec": 21.4,
+      "durationSec": 0.2,
+      "midi": 78
+    },
+    {
+      "startSec": 21.6,
+      "durationSec": 0.4,
+      "midi": 76
+    },
+    {
+      "startSec": 22,
+      "durationSec": 0.8,
+      "midi": 74
+    },
+    {
+      "startSec": 22.8,
+      "durationSec": 0.4,
+      "midi": 71
+    },
+    {
+      "startSec": 23.2,
+      "durationSec": 0.6,
+      "midi": 67
+    },
+    {
+      "startSec": 23.8,
+      "durationSec": 0.2,
+      "midi": 69
+    },
+    {
+      "startSec": 24,
+      "durationSec": 0.4,
+      "midi": 71
+    },
+    {
+      "startSec": 24.4,
+      "durationSec": 0.8,
+      "midi": 72
+    },
+    {
+      "startSec": 25.2,
+      "durationSec": 0.4,
+      "midi": 69
+    },
+    {
+      "startSec": 25.6,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 26.2,
+      "durationSec": 0.2,
+      "midi": 68
+    },
+    {
+      "startSec": 26.4,
+      "durationSec": 0.4,
+      "midi": 69
+    },
+    {
+      "startSec": 26.8,
+      "durationSec": 0.8,
+      "midi": 71
+    },
+    {
+      "startSec": 27.6,
+      "durationSec": 0.4,
+      "midi": 68
+    },
+    {
+      "startSec": 28,
+      "durationSec": 1.2,
+      "midi": 64
+    },
+    {
+      "startSec": 29.2,
+      "durationSec": 1.2,
+      "midi": 79
+    },
+    {
+      "startSec": 30.4,
+      "durationSec": 0.6,
+      "midi": 79
+    },
+    {
+      "startSec": 31,
+      "durationSec": 0.2,
+      "midi": 78
+    },
+    {
+      "startSec": 31.2,
+      "durationSec": 0.4,
+      "midi": 76
+    },
+    {
+      "startSec": 31.6,
+      "durationSec": 0.8,
+      "midi": 74
+    },
+    {
+      "startSec": 32.4,
+      "durationSec": 0.4,
+      "midi": 71
+    },
+    {
+      "startSec": 32.8,
+      "durationSec": 0.6,
+      "midi": 67
+    },
+    {
+      "startSec": 33.4,
+      "durationSec": 0.2,
+      "midi": 69
+    },
+    {
+      "startSec": 33.6,
+      "durationSec": 0.4,
+      "midi": 71
+    },
+    {
+      "startSec": 34,
+      "durationSec": 0.6,
+      "midi": 72
+    },
+    {
+      "startSec": 34.6,
+      "durationSec": 0.2,
+      "midi": 71
+    },
+    {
+      "startSec": 34.8,
+      "durationSec": 0.4,
+      "midi": 69
+    },
+    {
+      "startSec": 35.2,
+      "durationSec": 0.6,
+      "midi": 68
+    },
+    {
+      "startSec": 35.8,
+      "durationSec": 0.2,
+      "midi": 66
+    },
+    {
+      "startSec": 36,
+      "durationSec": 0.4,
+      "midi": 68
+    },
+    {
+      "startSec": 36.4,
+      "durationSec": 1.2,
+      "midi": 69
+    },
+    {
+      "startSec": 37.6,
+      "durationSec": 1.2,
+      "midi": 69
+    }
+  ]
+}

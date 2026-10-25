@@ -1,0 +1,27 @@
+{
+  "id": "twinkle",
+  "title": "Twinkle, Twinkle, Little Star",
+  "artist": "Traditional",
+  "difficulty": "easy",
+  "sourceInstrument": "piano",
+  "keySignature": "C major",
+  "tempoBpm": 100,
+  "licence": "Public domain (traditional melody)",
+  "audioLicence": "CC0 1.0",
+  "attribution": "Traditional melody (public domain). Original arrangement generated for Music Performance, released CC0 1.0.",
+  "sourceUrl": "https://commons.wikimedia.org/wiki/File:Twinkle_Twinkle_Little_Star_plain.ogg",
+  "source": "voices.json",
+  "sourceSha256": "5f4aac918d1b7c704bd9fcb14aa63b6b4c94b144eaf018c7ae6d9c418f96e1f0",
+  "soundfont": "FluidR3Mono_GM (MIT)",
+  "melody": {
+    "source": "melody.mid",
+    "voice": "melody"
+  },
+  "render": {
+    "kind": "voices",
+    "voicesFile": "voices.json",
+    "guideVoices": ["melody"],
+    "backingVoices": ["chords", "bass"],
+    "tailSec": 1.5
+  }
+}

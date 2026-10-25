@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run content:validate && tsc -b && vite build",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy",
     "typecheck": "tsc -b",
@@ -19,10 +19,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "cf-typegen": "wrangler types",
-    "cf-dry-run": "npm run build && wrangler deploy --dry-run"
+    "cf-dry-run": "npm run build && wrangler deploy --dry-run",
+    "content:build": "tsx scripts/content/build.ts",
+    "content:validate": "tsx scripts/content/validate.ts",
+    "content": "npm run content:build && npm run content:validate"
   },
   "dependencies": {
     "hono": "^4.13.14",
+    "pitchy": "^4.1.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
@@ -36,6 +40,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite": "^8.3.5",
     "vitest": "^5.0.5",

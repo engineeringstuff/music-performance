@@ -21,6 +21,8 @@ npm test           # Vitest unit tests
 npm run lint       # Biome
 npm run lint:fix   # Biome with fixes
 npm run cf-dry-run # validate the Worker bundle without deploying
+npm run content:build   # re-render stems/charts (needs FluidSynth + ffmpeg)
+npm run content:validate # validate manifests, hashes, charts and catalogue
 ```
 
 Do not deploy to Cloudflare unless explicitly asked.
@@ -46,9 +48,13 @@ Do not deploy to Cloudflare unless explicitly asked.
 - Phase 1 tracks are pre-approved CC-licensed assets with pre-computed charts. Follow
   `docs/002. TRACK-CONTENT.md`; never add music with unclear licensing.
 - Exit during a performance forfeits the score.
-- Scoring must forgive differences in vocal/instrumental range. Range fitting is done by
-  transposing the reference chart, not by loosening pitch accuracy.
+- Scoring must forgive differences in vocal/instrumental range. Phase 1 octave-fits the
+  reference chart and allows vocal octave equivalence; do not loosen pitch accuracy.
+  Semitone transposition would also require re-rendering the backing in the new key.
 - Do not implement Phase 2 uploads or fal.ai integration during Phase 1 work.
+- Content changes: update `content/tracks/<id>/track.json`, run
+  `npm run content:build`, and commit the rendered MP3s and chart. Keep the source
+  hashes in `track.json` current. Do not hand-edit `src/worker/catalog.generated.ts`.
 
 ## Documentation workflow
 

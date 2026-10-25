@@ -1,0 +1,319 @@
+{
+  "version": 1,
+  "trackId": "ode-to-joy",
+  "sourceInstrument": "vocals",
+  "tempoBpm": 100,
+  "keySignature": "G major",
+  "notes": [
+    {
+      "startSec": 0,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 0.6,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 1.2,
+      "durationSec": 0.6,
+      "midi": 72
+    },
+    {
+      "startSec": 1.8,
+      "durationSec": 0.6,
+      "midi": 74
+    },
+    {
+      "startSec": 2.4,
+      "durationSec": 0.6,
+      "midi": 74
+    },
+    {
+      "startSec": 3,
+      "durationSec": 0.6,
+      "midi": 72
+    },
+    {
+      "startSec": 3.6,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 4.2,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 4.8,
+      "durationSec": 0.6,
+      "midi": 67
+    },
+    {
+      "startSec": 5.4,
+      "durationSec": 0.6,
+      "midi": 67
+    },
+    {
+      "startSec": 6,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 6.6,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 7.2,
+      "durationSec": 0.9,
+      "midi": 71
+    },
+    {
+      "startSec": 8.1,
+      "durationSec": 0.3,
+      "midi": 69
+    },
+    {
+      "startSec": 8.4,
+      "durationSec": 1.2,
+      "midi": 69
+    },
+    {
+      "startSec": 9.6,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 10.2,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 10.8,
+      "durationSec": 0.6,
+      "midi": 72
+    },
+    {
+      "startSec": 11.4,
+      "durationSec": 0.6,
+      "midi": 74
+    },
+    {
+      "startSec": 12,
+      "durationSec": 0.6,
+      "midi": 74
+    },
+    {
+      "startSec": 12.6,
+      "durationSec": 0.6,
+      "midi": 72
+    },
+    {
+      "startSec": 13.2,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 13.8,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 14.4,
+      "durationSec": 0.6,
+      "midi": 67
+    },
+    {
+      "startSec": 15,
+      "durationSec": 0.6,
+      "midi": 67
+    },
+    {
+      "startSec": 15.6,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 16.2,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 16.8,
+      "durationSec": 0.9,
+      "midi": 69
+    },
+    {
+      "startSec": 17.7,
+      "durationSec": 0.3,
+      "midi": 67
+    },
+    {
+      "startSec": 18,
+      "durationSec": 1.2,
+      "midi": 67
+    },
+    {
+      "startSec": 19.2,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 19.8,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 20.4,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 21,
+      "durationSec": 0.6,
+      "midi": 67
+    },
+    {
+      "startSec": 21.6,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 22.2,
+      "durationSec": 0.3,
+      "midi": 71
+    },
+    {
+      "startSec": 22.5,
+      "durationSec": 0.3,
+      "midi": 72
+    },
+    {
+      "startSec": 22.8,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 23.4,
+      "durationSec": 0.6,
+      "midi": 67
+    },
+    {
+      "startSec": 24,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 24.6,
+      "durationSec": 0.3,
+      "midi": 71
+    },
+    {
+      "startSec": 24.9,
+      "durationSec": 0.3,
+      "midi": 72
+    },
+    {
+      "startSec": 25.2,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 25.8,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 26.4,
+      "durationSec": 0.6,
+      "midi": 67
+    },
+    {
+      "startSec": 27,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 27.6,
+      "durationSec": 1.2,
+      "midi": 62
+    },
+    {
+      "startSec": 28.8,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 29.4,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 30,
+      "durationSec": 0.6,
+      "midi": 72
+    },
+    {
+      "startSec": 30.6,
+      "durationSec": 0.6,
+      "midi": 74
+    },
+    {
+      "startSec": 31.2,
+      "durationSec": 0.6,
+      "midi": 74
+    },
+    {
+      "startSec": 31.8,
+      "durationSec": 0.6,
+      "midi": 72
+    },
+    {
+      "startSec": 32.4,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 33,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 33.6,
+      "durationSec": 0.6,
+      "midi": 67
+    },
+    {
+      "startSec": 34.2,
+      "durationSec": 0.6,
+      "midi": 67
+    },
+    {
+      "startSec": 34.8,
+      "durationSec": 0.6,
+      "midi": 69
+    },
+    {
+      "startSec": 35.4,
+      "durationSec": 0.6,
+      "midi": 71
+    },
+    {
+      "startSec": 36,
+      "durationSec": 0.9,
+      "midi": 69
+    },
+    {
+      "startSec": 36.9,
+      "durationSec": 0.3,
+      "midi": 67
+    },
+    {
+      "startSec": 37.2,
+      "durationSec": 1.2,
+      "midi": 67
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": "greensleeves",
+  "title": "Greensleeves",
+  "artist": "Traditional",
+  "difficulty": "medium",
+  "sourceInstrument": "vocals",
+  "keySignature": "A minor",
+  "tempoBpm": 150,
+  "licence": "Public domain",
+  "audioLicence": "CC0 1.0",
+  "attribution": "Traditional English folk song (public domain). MIDI: Mutopia Project (public domain). Rendered arrangement made for Music Performance.",
+  "sourceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1265",
+  "source": "source.mid",
+  "sourceSha256": "ec448ae781be40fdc2ddb24f734d7212d7ea5722616999cccbaf74998e1d34d0",
+  "soundfont": "FluidR3Mono_GM (MIT)",
+  "melody": { "source": "melody.mid", "voice": "treble" },
+  "render": {
+    "kind": "tracks",
+    "source": "source.mid",
+    "melodyTracks": [0, 1],
+    "backingTracks": [0, 2],
+    "tailSec": 1.5
+  }
+}

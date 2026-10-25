@@ -21,10 +21,10 @@ const RULES = [
 
 interface WelcomeScreenProps {
   onStart: () => void;
-  onPreview?: () => void;
+  onPitchLab?: () => void;
 }
 
-export function WelcomeScreen({ onStart, onPreview }: WelcomeScreenProps) {
+export function WelcomeScreen({ onStart, onPitchLab }: WelcomeScreenProps) {
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-12 px-6 pt-6 pb-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-16">
       <section className="animate-rise">
@@ -44,17 +44,21 @@ export function WelcomeScreen({ onStart, onPreview }: WelcomeScreenProps) {
             Enter the stage
             <span aria-hidden="true">→</span>
           </Button>
-          {onPreview && (
-            <Button variant="ghost" size="lg" onClick={onPreview}>
-              Preview game flow
-            </Button>
-          )}
         </div>
 
         <p className="mt-5 max-w-md text-xs leading-relaxed text-slate-400">
           Microphone access is requested only when a performance starts. Audio never leaves this
-          browser. This is the Phase 1 scaffold: the stage is ready, the audio engine is next.
+          browser. Use headphones for the cleanest score.
         </p>
+        {onPitchLab && (
+          <button
+            type="button"
+            onClick={onPitchLab}
+            className="mt-4 text-xs font-medium text-stage-300 underline decoration-white/20 underline-offset-4 transition hover:text-white"
+          >
+            Pitch lab (developer)
+          </button>
+        )}
       </section>
 
       <section className="animate-rise space-y-5 [animation-delay:120ms]">

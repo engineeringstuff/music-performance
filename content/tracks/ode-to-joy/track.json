@@ -1,0 +1,26 @@
+{
+  "id": "ode-to-joy",
+  "title": "Ode to Joy",
+  "artist": "Ludwig van Beethoven",
+  "difficulty": "medium",
+  "sourceInstrument": "vocals",
+  "keySignature": "G major",
+  "tempoBpm": 100,
+  "licence": "Public domain",
+  "audioLicence": "CC0 1.0",
+  "attribution": "Composition: Ludwig van Beethoven (public domain). MIDI and LilyPond: Mutopia Project (public domain). Rendered arrangement made for Music Performance.",
+  "sourceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=528",
+  "source": "source.ly",
+  "sourceSha256": "a0c865aa9f71221605362622d281405071e0734540e86ce131131757cc803a71",
+  "sourceMidi": "source.mid",
+  "sourceMidiSha256": "fb1604c08c865b275b464d74e5a7c526ff1a8acccdf9853cb92f0778daaed14b",
+  "soundfont": "FluidR3Mono_GM (MIT)",
+  "melody": { "source": "melody.mid", "voice": "soprano" },
+  "render": {
+    "kind": "voices",
+    "voicesFile": "voices.json",
+    "guideVoices": ["sop"],
+    "backingVoices": ["alto", "tenor", "bass"],
+    "tailSec": 1.5
+  }
+}

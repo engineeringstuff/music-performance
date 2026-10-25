@@ -81,3 +81,20 @@
     transform: scale(1.04);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-pop,
+  .animate-glow,
+  .animate-pulse,
+  .animate-spin {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms;
+  }
+}

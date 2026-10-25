@@ -38,7 +38,11 @@ export interface TrackSummary {
   attribution: string;
   sourceUrl: string;
   audioUrl: string;
+  /** Melody-only guide stem, if the track ships one. */
+  guideUrl?: string;
   chartUrl: string;
+  keySignature?: string;
+  tempoBpm?: number;
 }
 
 /** A single note the player is asked to match. */
@@ -55,11 +59,13 @@ export interface TargetNote {
 
 /** Pre-computed music data for one backing track. */
 export interface TrackChart {
+  version: 1;
   trackId: string;
   /** Instrument the reference melody was transcribed from. */
   sourceInstrument: InstrumentId;
   /** Beats per minute, for visual pacing. */
   tempoBpm: number;
+  keySignature?: string;
   notes: TargetNote[];
 }
 
@@ -72,20 +78,6 @@ export interface GameConfig {
    * automatically to fit the player's range; 0 means "as written".
    */
   transposeSemitones: number;
-}
-
-export interface ScoreSummary {
-  totalPoints: number;
-  maxPoints: number;
-  /** Overall accuracy in the range 0..1. */
-  accuracy: number;
-  notesHit: number;
-  notesMissed: number;
-  longestStreak: number;
-}
-
-export interface GameResult {
-  config: GameConfig;
-  score: ScoreSummary;
-  completedAt: string;
+  /** Play the melody-only guide stem under the backing track. */
+  guideEnabled: boolean;
 }
