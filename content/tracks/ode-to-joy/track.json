@@ -14,13 +14,18 @@
   "sourceSha256": "a0c865aa9f71221605362622d281405071e0734540e86ce131131757cc803a71",
   "sourceMidi": "source.mid",
   "sourceMidiSha256": "fb1604c08c865b275b464d74e5a7c526ff1a8acccdf9853cb92f0778daaed14b",
-  "soundfont": "FluidR3Mono_GM (MIT)",
-  "melody": { "source": "melody.mid", "voice": "soprano" },
+  "soundfont": "FluidR3Mono_GM (see THIRD_PARTY_NOTICES; legal review pending)",
+  "melody": {
+    "source": "melody.mid",
+    "voice": "sop"
+  },
   "render": {
     "kind": "voices",
     "voicesFile": "voices.json",
     "guideVoices": ["sop"],
     "backingVoices": ["alto", "tenor", "bass"],
     "tailSec": 1.5
-  }
+  },
+  "program": 0,
+  "transpositions": [-2, 0, 2]
 }

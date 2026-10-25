@@ -48,15 +48,15 @@ export function WelcomeScreen({ onStart, onPitchLab }: WelcomeScreenProps) {
 
         <p className="mt-5 max-w-md text-xs leading-relaxed text-slate-400">
           Microphone access is requested only when a performance starts. Audio never leaves this
-          browser. Use headphones for the cleanest score.
+          browser. Use wired headphones for the cleanest score; Bluetooth adds latency.
         </p>
         {onPitchLab && (
           <button
             type="button"
             onClick={onPitchLab}
-            className="mt-4 text-xs font-medium text-stage-300 underline decoration-white/20 underline-offset-4 transition hover:text-white"
+            className="mt-4 inline-flex min-h-11 items-center text-xs font-medium text-stage-300 underline decoration-white/20 underline-offset-4 transition hover:text-white"
           >
-            Pitch lab (developer)
+            Test microphone
           </button>
         )}
       </section>

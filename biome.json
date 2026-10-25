@@ -12,7 +12,9 @@
       "!node_modules",
       "!.wrangler",
       "!docs/001. PROMPT.md",
-      "!src/worker/catalog.generated.ts"
+      "!src/worker/catalog.generated.ts",
+      "!content/content.lock.json",
+      "!content/tracks/**/voices.json"
     ]
   },
   "formatter": {

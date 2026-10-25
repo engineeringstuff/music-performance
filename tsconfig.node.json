@@ -18,5 +18,11 @@
     "noUncheckedSideEffectImports": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "scripts/**/*.ts"]
+  "include": [
+    "vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "scripts/**/*.ts",
+    "playwright.pwa.config.ts"
+  ]
 }

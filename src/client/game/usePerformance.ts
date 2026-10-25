@@ -18,7 +18,8 @@ import {
   scorePerformance,
 } from "../../shared/scoring";
 import { loadPerformance } from "../audio/loadPerformance";
-import { MicrophonePitchSource } from "../audio/pitch";
+import { MicrophonePitchSource, MidiPitchSource, type PitchSource } from "../audio/pitch";
+import { loadAudioSettings, loadLatencyOffsetMs } from "../lib/preferences";
 
 const COUNTDOWN_SECONDS = 3;
 const SCORE_UPDATE_INTERVAL = 0.2;
@@ -40,6 +41,7 @@ export interface PerformanceState {
   currentCents: number | null;
   liveScore: ScoreBreakdown | null;
   error: string | null;
+  preparingMessage: string | null;
   instrument: Instrument | null;
   chart: TrackChart | null;
   notes: TargetNote[];
@@ -61,6 +63,7 @@ const INITIAL_STATE: PerformanceState = {
   currentCents: null,
   liveScore: null,
   error: null,
+  preparingMessage: null,
   instrument: null,
   chart: null,
   notes: [],
@@ -81,6 +84,10 @@ function findNoteIndex(notes: readonly TargetNote[], timeSec: number): number | 
       return index;
     }
   }
+  const last = notes[notes.length - 1];
+  if (last && timeSec > last.startSec + last.durationSec + 0.5) {
+    return null;
+  }
   return notes.length - 1;
 }
 
@@ -88,11 +95,26 @@ function centsFromFrame(frame: PitchFrame, targetMidi: number): number {
   return 1200 * Math.log2(frame.hz / midiToFrequency(targetMidi));
 }
 
+function scheduleCountIn(context: AudioContext, startTime: number): void {
+  for (let index = 0; index < 3; index += 1) {
+    const at = startTime - 3 + index;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.frequency.value = index === 0 ? 1046.5 : 880;
+    gain.gain.setValueAtTime(0.16, at);
+    gain.gain.exponentialRampToValueAtTime(0.001, at + 0.06);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start(at);
+    oscillator.stop(at + 0.07);
+  }
+}
+
 export function usePerformance({ config, track, onFinish, onForfeit }: UsePerformanceOptions) {
   const [state, setState] = useState<PerformanceState>(INITIAL_STATE);
+  const [paused, setPaused] = useState(false);
 
   const contextRef = useRef<AudioContext | null>(null);
-  const microphoneRef = useRef<MicrophonePitchSource | null>(null);
+  const pitchSourceRef = useRef<PitchSource | null>(null);
   const sourcesRef = useRef<AudioBufferSourceNode[]>([]);
   const animationRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -105,6 +127,7 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
   const startedRef = useRef(false);
   const finishedRef = useRef(false);
   const activeRef = useRef(false);
+  const pausedRef = useRef(false);
   const fitRef = useRef<RangeFit | null>(null);
   const onFinishRef = useRef(onFinish);
   const onForfeitRef = useRef(onForfeit);
@@ -127,17 +150,18 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
       }
     }
     sourcesRef.current = [];
-    microphoneRef.current?.disconnect();
-    microphoneRef.current = null;
+    pitchSourceRef.current?.disconnect();
+    pitchSourceRef.current = null;
     if (contextRef.current) {
       const context = contextRef.current;
       contextRef.current = null;
       void context.close().catch(() => undefined);
     }
     startedRef.current = false;
-    finishedRef.current = false;
     activeRef.current = false;
+    pausedRef.current = false;
     framesRef.current = [];
+    setPaused(false);
   }, []);
 
   const fail = useCallback(
@@ -152,6 +176,29 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
     },
     [stopPlayback],
   );
+
+  const pause = useCallback(() => {
+    if (!contextRef.current || pausedRef.current) {
+      return;
+    }
+    pausedRef.current = true;
+    setPaused(true);
+    void contextRef.current.suspend().catch(() => undefined);
+  }, []);
+
+  const resume = useCallback(async () => {
+    if (!contextRef.current || !pausedRef.current) {
+      return;
+    }
+    try {
+      await contextRef.current.resume();
+    } catch {
+      // The context may have been closed while the dialog was open.
+    } finally {
+      pausedRef.current = false;
+      setPaused(false);
+    }
+  }, []);
 
   const finish = useCallback(() => {
     if (finishedRef.current) {
@@ -174,8 +221,9 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
       liveScore: finalScore,
       currentCents: null,
     }));
-    onFinishRef.current(finalScore, fitRef.current?.semitones ?? 0);
-  }, [stopPlayback]);
+    const keyTranspose = config.keyTransposeSemitones ?? config.transposeSemitones;
+    onFinishRef.current(finalScore, keyTranspose + (fitRef.current?.semitones ?? 0));
+  }, [config, stopPlayback]);
 
   const start = useCallback(async () => {
     if (
@@ -189,7 +237,11 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
 
     stopPlayback();
     activeRef.current = true;
-    setState({ ...INITIAL_STATE, phase: "preparing" });
+    setState({
+      ...INITIAL_STATE,
+      phase: "preparing",
+      preparingMessage: "Loading chart and audio…",
+    });
     const instrument = getInstrument(config.instrumentId);
     if (!instrument) {
       fail(new Error(`Unknown instrument: ${config.instrumentId}`));
@@ -198,30 +250,44 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
 
     const abort = new AbortController();
     abortRef.current = abort;
+    let pitchSource: PitchSource | null = null;
 
     try {
       const context = new AudioContext({ latencyHint: "interactive" });
       contextRef.current = context;
       await context.resume();
 
-      const microphone = new MicrophonePitchSource(context);
-      microphoneRef.current = microphone;
+      const audioSettings = loadAudioSettings();
+      const latencyMs = loadLatencyOffsetMs();
+      pitchSource =
+        config.inputMode === "midi"
+          ? new MidiPitchSource(latencyMs / 1000)
+          : new MicrophonePitchSource(context, latencyMs / 1000);
+      pitchSourceRef.current = pitchSource;
 
+      const keyTranspose = config.keyTransposeSemitones ?? config.transposeSemitones;
       const [loaded] = await Promise.all([
-        loadPerformance(context, track, abort.signal),
-        microphone.connect(),
+        loadPerformance(context, track, abort.signal, {
+          loadGuide: config.guideEnabled,
+          transposeSemitones: keyTranspose,
+        }),
+        pitchSource.connect(abort.signal),
       ]);
 
       if (abort.signal.aborted) {
+        pitchSource.disconnect();
+        stopPlayback();
         return;
       }
 
-      const fit = fitRange(loaded.chart.notes, instrument.range);
-      const notes = transposeNotes(loaded.chart.notes, fit.semitones);
+      const shiftedChart = transposeNotes(loaded.chart.notes, keyTranspose);
+      const fit = fitRange(shiftedChart, instrument.range);
+      const notes = transposeNotes(shiftedChart, fit.semitones);
       scoringOptionsRef.current = {
         ...DEFAULT_SCORING,
         transposeSemitones: 0,
         allowOctaveEquivalence: config.instrumentId === "vocals",
+        onsetRequired: config.inputMode === "midi",
       };
       const contextStart = context.currentTime + COUNTDOWN_SECONDS;
       const performanceDuration = Math.min(
@@ -238,9 +304,12 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
       lastScoreAtRef.current = Number.NEGATIVE_INFINITY;
       startedRef.current = false;
       finishedRef.current = false;
+      pausedRef.current = false;
+
+      scheduleCountIn(context, contextStart);
 
       const backingGain = context.createGain();
-      backingGain.gain.value = 0.9;
+      backingGain.gain.value = audioSettings.backingVolume;
       backingGain.connect(context.destination);
       const backingSource = context.createBufferSource();
       backingSource.buffer = loaded.audio.backing;
@@ -250,7 +319,7 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
 
       if (loaded.audio.guide) {
         const guideGain = context.createGain();
-        guideGain.gain.value = config.guideEnabled ? 0.22 : 0;
+        guideGain.gain.value = config.guideEnabled ? audioSettings.guideVolume : 0;
         guideGain.connect(context.destination);
         const guideSource = context.createBufferSource();
         guideSource.buffer = loaded.audio.guide;
@@ -259,9 +328,16 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
         sourcesRef.current.push(guideSource);
       }
 
+      if (abort.signal.aborted) {
+        pitchSource.disconnect();
+        stopPlayback();
+        return;
+      }
+
       setState({
         ...INITIAL_STATE,
         phase: "countdown",
+        preparingMessage: null,
         countdown: COUNTDOWN_SECONDS,
         instrument,
         chart: loaded.chart,
@@ -271,8 +347,13 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
 
       const loop = () => {
         const currentContext = contextRef.current;
-        const currentMic = microphoneRef.current;
+        const currentMic = pitchSourceRef.current;
         if (!currentContext || !currentMic || finishedRef.current) {
+          return;
+        }
+
+        if (pausedRef.current) {
+          animationRef.current = requestAnimationFrame(loop);
           return;
         }
 
@@ -336,7 +417,9 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
 
       animationRef.current = requestAnimationFrame(loop);
     } catch (error) {
+      pitchSource?.disconnect();
       if (abort.signal.aborted) {
+        stopPlayback();
         return;
       }
       fail(error);
@@ -357,7 +440,10 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
 
   return {
     ...state,
+    paused,
     start,
+    pause,
+    resume,
     forfeit,
     durationSec: durationRef.current || track.durationSec,
   };

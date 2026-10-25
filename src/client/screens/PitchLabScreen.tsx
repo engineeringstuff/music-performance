@@ -16,13 +16,19 @@ interface Reading {
 
 export function PitchLabScreen({ onBack }: PitchLabScreenProps) {
   const [active, setActive] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [reading, setReading] = useState<Reading | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const connectingRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
   const contextRef = useRef<AudioContext | null>(null);
   const microphoneRef = useRef<MicrophonePitchSource | null>(null);
   const animationRef = useRef<number | null>(null);
 
   const stop = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    connectingRef.current = false;
     if (animationRef.current !== null) {
       cancelAnimationFrame(animationRef.current);
       animationRef.current = null;
@@ -39,6 +45,7 @@ export function PitchLabScreen({ onBack }: PitchLabScreenProps) {
 
   useEffect(() => {
     return () => {
+      abortRef.current?.abort();
       if (animationRef.current !== null) {
         cancelAnimationFrame(animationRef.current);
       }
@@ -50,15 +57,26 @@ export function PitchLabScreen({ onBack }: PitchLabScreenProps) {
   }, []);
 
   const start = async () => {
+    if (connectingRef.current || active) {
+      return;
+    }
+    connectingRef.current = true;
+    setConnecting(true);
     setError(null);
     setReading(null);
+    const abort = new AbortController();
+    abortRef.current = abort;
     try {
       const context = new AudioContext({ latencyHint: "interactive" });
       contextRef.current = context;
       await context.resume();
       const microphone = new MicrophonePitchSource(context);
       microphoneRef.current = microphone;
-      await microphone.connect();
+      await microphone.connect(abort.signal);
+      if (abort.signal.aborted) {
+        microphone.disconnect();
+        return;
+      }
       setActive(true);
 
       const loop = () => {
@@ -82,8 +100,13 @@ export function PitchLabScreen({ onBack }: PitchLabScreenProps) {
       };
       animationRef.current = requestAnimationFrame(loop);
     } catch (caught) {
-      stop();
-      setError(caught instanceof Error ? caught.message : "Could not start the microphone.");
+      if (!abort.signal.aborted) {
+        stop();
+        setError(caught instanceof Error ? caught.message : "Could not start the microphone.");
+      }
+    } finally {
+      connectingRef.current = false;
+      setConnecting(false);
     }
   };
 
@@ -95,17 +118,17 @@ export function PitchLabScreen({ onBack }: PitchLabScreenProps) {
           stop();
           onBack();
         }}
-        className="text-sm text-stage-300 transition hover:text-white"
+        className="inline-flex min-h-11 items-center text-sm text-stage-300 transition hover:text-white"
       >
         ← Back
       </button>
       <p className="mt-6 text-xs font-semibold tracking-[0.3em] text-accent-300 uppercase">
-        Developer tool
+        Before you play
       </p>
-      <h1 className="mt-3 text-4xl font-semibold tracking-tight">Pitch lab</h1>
+      <h1 className="mt-3 text-4xl font-semibold tracking-tight">Microphone check</h1>
       <p className="mt-3 text-stage-300">
-        Check the microphone and detector without a backing track. Play or sing a steady note and
-        compare the reading with a tuner.
+        Check the microphone without a backing track. Play or sing a steady note and compare the
+        reading with a tuner. Wired headphones are recommended; Bluetooth adds latency.
       </p>
 
       {error && (
@@ -143,7 +166,9 @@ export function PitchLabScreen({ onBack }: PitchLabScreenProps) {
             Stop listening
           </Button>
         ) : (
-          <Button onClick={() => void start()}>Start listening</Button>
+          <Button onClick={() => void start()} disabled={connecting}>
+            {connecting ? "Connecting…" : "Start listening"}
+          </Button>
         )}
         <p className="text-xs text-slate-400">Readings are approximate; use a clean single note.</p>
       </div>

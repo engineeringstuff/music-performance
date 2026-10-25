@@ -6,9 +6,10 @@
   [`GreensleevesAcc.mid`](https://www.mutopiaproject.org/ftp/Traditional/GreensleevesAcc/GreensleevesAcc.mid).
 - **Voices:** the MIDI has separate `treble` (melody) and `bass` tracks. The chart uses
   the treble track; the backing uses the bass track plus the tempo control track.
-- **Our outputs:** `melody.mid`, `backing.mid`, the chart and the rendered stems are
-  released as **CC0 1.0**. The soundfont notice is in
-  [`content/SOUNDFONT-LICENSE.md`](../../SOUNDFONT-LICENSE.md).
+- **Our outputs:** `melody.mid`, `backing.mid`, the chart and the arrangement are released
+  as **CC0 1.0**. The rendered audio uses MIT-licensed FluidR3Mono samples; the complete
+  notices are served at [`public/THIRD_PARTY_NOTICES.txt`](../../../public/THIRD_PARTY_NOTICES.txt)
+  and reproduced in [`content/SOUNDFONT-LICENSE.md`](../../SOUNDFONT-LICENSE.md).
 
 The source MIDI is committed unchanged as `source.mid`; its SHA-256 is recorded in
 `track.json`.

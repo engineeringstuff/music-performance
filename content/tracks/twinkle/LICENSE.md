@@ -6,11 +6,11 @@
   public domain (own work by the uploader). Not shipped.
 - **Arrangement:** Original arrangement written for this project. The melody is a
   traditional public-domain tune; the chords, bass line and MIDI realisation are new.
-  `voices.json`, `melody.mid`, `backing.mid`, the chart and the rendered stems are
-  released as **CC0 1.0**.
-- **Soundfont:** FluidR3Mono_GM (MIT). See
-  [`content/SOUNDFONT-LICENSE.md`](../../SOUNDFONT-LICENSE.md).
+  `voices.json`, `melody.mid`, `backing.mid`, the chart and the arrangement are released
+  as **CC0 1.0**. The rendered audio uses MIT-licensed FluidR3Mono samples; the complete
+  notices are served at [`public/THIRD_PARTY_NOTICES.txt`](../../../public/THIRD_PARTY_NOTICES.txt)
+  and reproduced in [`content/SOUNDFONT-LICENSE.md`](../../SOUNDFONT-LICENSE.md).
 
-No portion of the Commons MIDI or OGG files from the 1896 songbook is used; the original
-Commons MIDI was not a reliable match for the melody. The reference OGG is linked only as
-the public-domain melody source.
+Neither the 1896 songbook MIDI nor the Commons OGG is part of the rendered track. The OGG
+is linked only as a public-domain melody reference; the songbook MIDI did not contain the
+expected melody and is not used.

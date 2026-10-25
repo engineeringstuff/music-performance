@@ -12,13 +12,17 @@
   "sourceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1265",
   "source": "source.mid",
   "sourceSha256": "ec448ae781be40fdc2ddb24f734d7212d7ea5722616999cccbaf74998e1d34d0",
-  "soundfont": "FluidR3Mono_GM (MIT)",
-  "melody": { "source": "melody.mid", "voice": "treble" },
+  "soundfont": "FluidR3Mono_GM (see THIRD_PARTY_NOTICES; legal review pending)",
+  "melody": {
+    "source": "melody.mid",
+    "voice": "treble"
+  },
   "render": {
     "kind": "tracks",
     "source": "source.mid",
     "melodyTracks": [0, 1],
     "backingTracks": [0, 2],
     "tailSec": 1.5
-  }
+  },
+  "transpositions": [-2, 0, 2]
 }

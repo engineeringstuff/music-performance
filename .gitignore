@@ -162,3 +162,17 @@ vite.config.ts.timestamp-*
 # Content build tools
 content/soundfont/*.sf2
 content/soundfont/*.sf3
+
+# Playwright
+playwright-report/
+test-results/
+
+# Content build staging
+.content-build/
+
+# Content publish backups
+public/audio.content-backup/
+public/charts.content-backup/
+
+# Session transcripts
+session-*.md

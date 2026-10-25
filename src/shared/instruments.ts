@@ -3,10 +3,11 @@ import type { Instrument } from "./domain";
 /**
  * The Phase 1 instrument roster.
  *
- * Ranges are written pitch, not concert pitch, and are intentionally
- * conservative: they describe a comfortable amateur range rather than the full
- * capability of the instrument. Scoring will use these ranges to transpose a
- * track into a playable key.
+ * Ranges are sounding (concert) pitch, not written notation, and are
+ * intentionally conservative: they describe a comfortable amateur range rather
+ * than the full capability of the instrument. Charts are displayed and scored
+ * at concert pitch. Guitarists reading written notation should remember that
+ * guitar sounds an octave below the written staff.
  */
 export const INSTRUMENTS: readonly Instrument[] = [
   {

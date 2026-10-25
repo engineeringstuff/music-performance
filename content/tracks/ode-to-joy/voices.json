@@ -1,6 +1,9 @@
 {
   "tempoBpm": 100,
-  "timeSignature": [4, 4],
+  "timeSignature": [
+    4,
+    4
+  ],
   "voices": {
     "sop": [
       {
@@ -536,7 +539,7 @@
         "durationBeats": 1.0
       },
       {
-        "midi": 62,
+        "midi": 50,
         "startBeats": 46.0,
         "durationBeats": 2.0
       },
@@ -616,7 +619,7 @@
         "durationBeats": 1.0
       },
       {
-        "midi": 67,
+        "midi": 55,
         "startBeats": 62.0,
         "durationBeats": 2.0
       }

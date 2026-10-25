@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { GameConfig, TargetNote, TrackSummary } from "../../shared/domain";
 import { getInstrument } from "../../shared/instruments";
 import { midiToNoteName } from "../../shared/music";
@@ -6,32 +6,42 @@ import type { NoteEvaluation, NoteRating, ScoreBreakdown } from "../../shared/sc
 import { Button } from "../components/Button";
 import { usePerformance } from "../game/usePerformance";
 import { formatClock } from "../lib/format";
+import { useReducedMotion } from "../lib/useReducedMotion";
 
 interface GameScreenProps {
   config: GameConfig;
   track: TrackSummary;
   onForfeit: () => void;
   onFinish: (score: ScoreBreakdown, transposeSemitones: number) => void;
+  onPractice: () => void;
+  onActiveChange: (active: boolean) => void;
 }
 
-const RATING_STYLES: Record<NoteRating, { label: string; block: string; text: string }> = {
+const RATING_STYLES: Record<
+  NoteRating,
+  { label: string; symbol: string; block: string; text: string }
+> = {
   perfect: {
     label: "Perfect",
+    symbol: "★",
     block: "border-emerald-200/70 bg-emerald-400/85 text-emerald-950",
     text: "text-emerald-300",
   },
   great: {
     label: "Great",
+    symbol: "✓",
     block: "border-teal-200/60 bg-teal-400/80 text-teal-950",
     text: "text-teal-300",
   },
   good: {
     label: "Good",
+    symbol: "•",
     block: "border-amber-200/60 bg-amber-400/80 text-amber-950",
     text: "text-amber-300",
   },
   miss: {
     label: "Miss",
+    symbol: "×",
     block: "border-rose-300/50 bg-rose-500/55 text-rose-50",
     text: "text-rose-300",
   },
@@ -39,7 +49,6 @@ const RATING_STYLES: Record<NoteRating, { label: string; block: string; text: st
 
 const LANE_BEFORE_SEC = 1.2;
 const LANE_AFTER_SEC = 4.5;
-const LANE_SPAN_SEC = LANE_BEFORE_SEC + LANE_AFTER_SEC;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -51,15 +60,20 @@ function PitchLane({
   currentIndex,
   currentCents,
   evaluations,
+  reducedMotion,
 }: {
   notes: readonly TargetNote[];
   timeSec: number;
   currentIndex: number | null;
   currentCents: number | null;
   evaluations: Map<number, NoteEvaluation>;
+  reducedMotion: boolean;
 }) {
+  const laneAfterSec = notes.length > 90 ? 3.2 : LANE_AFTER_SEC;
+  const laneSpanSec = LANE_BEFORE_SEC + laneAfterSec;
   const laneStart = timeSec - LANE_BEFORE_SEC;
-  const laneEnd = timeSec + LANE_AFTER_SEC;
+  const laneEnd = timeSec + laneAfterSec;
+  const currentNote = currentIndex === null ? null : notes[currentIndex];
 
   const range = useMemo(() => {
     if (notes.length === 0) {
@@ -71,11 +85,45 @@ function PitchLane({
     return { minMidi, maxMidi: Math.max(maxMidi, minMidi + 12) };
   }, [notes]);
 
-  const xPercent = (seconds: number) => ((seconds - laneStart) / LANE_SPAN_SEC) * 100;
+  const xPercent = (seconds: number) => ((seconds - laneStart) / laneSpanSec) * 100;
   const yPercent = (midi: number) =>
     ((range.maxMidi - midi) / (range.maxMidi - range.minMidi)) * 100;
-  const playheadPercent = (LANE_BEFORE_SEC / LANE_SPAN_SEC) * 100;
-  const currentNote = currentIndex === null ? null : notes[currentIndex];
+  const playheadPercent = (LANE_BEFORE_SEC / laneSpanSec) * 100;
+
+  if (reducedMotion) {
+    const startIndex = currentIndex === null ? 0 : currentIndex + 1;
+    const upcoming = notes.slice(startIndex, startIndex + 4);
+    return (
+      <div className="relative flex h-72 flex-col justify-center overflow-hidden rounded-3xl border border-white/10 bg-stage-950/80 p-6">
+        <p className="text-[10px] font-medium tracking-widest text-stage-300 uppercase">
+          Current target · concert pitch
+        </p>
+        <div className="mt-4 flex flex-wrap items-baseline gap-4">
+          <span className="font-mono text-6xl font-semibold text-accent-300">
+            {currentNote ? midiToNoteName(currentNote.midi) : "—"}
+          </span>
+          <span className="text-lg text-stage-300">
+            {currentCents === null
+              ? "Listening"
+              : `${currentCents > 0 ? "+" : ""}${Math.round(currentCents)} cents`}
+          </span>
+        </div>
+        {currentNote?.lyric && (
+          <p className="mt-3 text-lg font-medium text-accent-300">“{currentNote.lyric}”</p>
+        )}
+        <p className="mt-6 text-sm text-stage-300">
+          Reduced motion is on, so the lane stays still. Follow the current note and the cents
+          reading.
+        </p>
+        <p className="mt-3 text-sm text-slate-200">
+          Up next:{" "}
+          {upcoming.length > 0
+            ? upcoming.map((note) => midiToNoteName(note.midi)).join(" · ")
+            : "end of track"}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -94,6 +142,9 @@ function PitchLane({
           className="absolute inset-y-0 w-px bg-accent-300/50 shadow-[0_0_16px_rgba(110,231,183,0.55)]"
           style={{ left: `${playheadPercent}%` }}
         />
+        <span className="absolute top-3 left-4 rounded-full border border-white/10 bg-stage-950/70 px-2 py-0.5 text-[10px] tracking-wider text-stage-300 uppercase">
+          Concert pitch
+        </span>
       </div>
 
       {currentNote && (
@@ -116,7 +167,7 @@ function PitchLane({
         const isCurrent = index === currentIndex;
         const style = evaluation ? RATING_STYLES[evaluation.rating] : null;
         const left = xPercent(note.startSec);
-        const width = Math.max(1.4, (note.durationSec / LANE_SPAN_SEC) * 100);
+        const width = Math.max(1.4, (note.durationSec / laneSpanSec) * 100);
         const upcoming = !evaluation && !isCurrent;
 
         return (
@@ -138,7 +189,13 @@ function PitchLane({
               top: `${yPercent(note.midi)}%`,
             }}
           >
-            {width > 4 ? midiToNoteName(note.midi) : ""}
+            {style
+              ? width > 7
+                ? `${style.symbol} ${midiToNoteName(note.midi)}`
+                : style.symbol
+              : width > 4
+                ? midiToNoteName(note.midi)
+                : ""}
           </div>
         );
       })}
@@ -183,11 +240,28 @@ function Stat({
   );
 }
 
-export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenProps) {
+export function GameScreen({
+  config,
+  track,
+  onForfeit,
+  onFinish,
+  onPractice,
+  onActiveChange,
+}: GameScreenProps) {
   const performance = usePerformance({ config, track, onFinish, onForfeit });
-  const [confirmExit, setConfirmExit] = useState(false);
+  const reducedMotion = useReducedMotion();
+  const [dialogMode, setDialogMode] = useState<"forfeit" | "pause" | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const forfeitButtonRef = useRef<HTMLButtonElement>(null);
+  const pauseButtonRef = useRef<HTMLButtonElement>(null);
   const instrument = performance.instrument ?? getInstrument(config.instrumentId);
-  const { phase } = performance;
+  const keyTranspose = config.keyTransposeSemitones ?? config.transposeSemitones;
+  const { phase, pause, resume } = performance;
+
+  useEffect(() => {
+    onActiveChange(phase === "playing");
+    return () => onActiveChange(false);
+  }, [onActiveChange, phase]);
 
   useEffect(() => {
     if (phase !== "playing") {
@@ -195,29 +269,75 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
     }
     const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
       event.preventDefault();
+      event.returnValue = "";
     };
     window.addEventListener("beforeunload", warnBeforeLeaving);
     return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
   }, [phase]);
 
   useEffect(() => {
-    if (!confirmExit) {
+    if (phase !== "playing" || dialogMode !== null) {
       return;
     }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setConfirmExit(false);
+        event.preventDefault();
+        setDialogMode("forfeit");
+        pause();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [confirmExit]);
+  }, [phase, dialogMode, pause]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+    if (dialogMode !== null && !dialog.open) {
+      dialog.showModal();
+      document.body.style.overflow = "hidden";
+    } else if (dialogMode === null && dialog.open) {
+      dialog.close();
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [dialogMode]);
 
   const handleExit = () => {
     if (phase === "playing") {
-      setConfirmExit(true);
+      setDialogMode("forfeit");
+      pause();
       return;
     }
+    performance.forfeit();
+  };
+
+  const handlePause = () => {
+    if (phase !== "playing" || dialogMode !== null) {
+      return;
+    }
+    setDialogMode("pause");
+    pause();
+  };
+
+  const handleKeepPlaying = () => {
+    setDialogMode(null);
+    void resume();
+    requestAnimationFrame(() => forfeitButtonRef.current?.focus());
+  };
+
+  const handleResume = () => {
+    setDialogMode(null);
+    void resume();
+    requestAnimationFrame(() => pauseButtonRef.current?.focus());
+  };
+
+  const handleForfeit = () => {
+    setDialogMode(null);
     performance.forfeit();
   };
 
@@ -236,8 +356,8 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
           </Button>
         </div>
         <p className="mt-6 text-xs leading-relaxed text-slate-400">
-          If the browser is blocking the microphone, check the site permissions and make sure the
-          page is served over HTTPS or localhost.
+          If the browser is blocking your input, check the site permissions and make sure the page
+          is served over HTTPS or localhost.
         </p>
       </div>
     );
@@ -258,7 +378,7 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
         <button
           type="button"
           onClick={handleExit}
-          className="mt-8 text-sm text-stage-300 transition hover:text-white"
+          className="mt-8 inline-flex min-h-11 items-center text-sm text-stage-300 transition hover:text-white"
         >
           Cancel
         </button>
@@ -276,14 +396,21 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
           role="status"
           aria-live="assertive"
           aria-atomic="true"
-          key={performance.countdown}
-          className="animate-pop mt-6 font-mono text-[9rem] leading-none font-semibold text-white tabular-nums sm:text-[12rem]"
+          className="mt-6 font-mono text-[9rem] leading-none font-semibold text-white tabular-nums sm:text-[12rem]"
         >
-          {performance.countdown}
+          <span key={performance.countdown} className="animate-pop inline-block">
+            {performance.countdown}
+          </span>
         </div>
         <p className="mt-6 text-stage-300">
           {track.title} · {instrument?.name ?? "Instrument"}
         </p>
+        {keyTranspose !== 0 && (
+          <p className="mt-2 text-sm text-accent-300">
+            Backing key {keyTranspose > 0 ? "+" : ""}
+            {keyTranspose} semitones.
+          </p>
+        )}
         {performance.fit && performance.fit.semitones !== 0 && (
           <p className="mt-2 text-sm text-accent-300">
             Fitted {performance.fit.semitones > 0 ? "up" : "down"}{" "}
@@ -296,11 +423,13 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
         {performance.fit?.warning && (
           <p className="mt-2 max-w-md text-sm text-amber-200">{performance.fit.warning}</p>
         )}
-        <p className="mt-6 text-xs text-slate-400">Use headphones if you can.</p>
+        <p className="mt-6 max-w-md text-xs leading-relaxed text-slate-400">
+          Wired headphones are best. Bluetooth adds latency.
+        </p>
         <button
           type="button"
           onClick={handleExit}
-          className="mt-8 text-sm text-stage-300 transition hover:text-white"
+          className="mt-8 inline-flex min-h-11 items-center text-sm text-stage-300 transition hover:text-white"
         >
           Cancel performance
         </button>
@@ -320,14 +449,6 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
     const cents = performance.currentCents;
     const centsLabel =
       cents === null ? "Listening" : `${cents > 0 ? "+" : ""}${Math.round(cents)} cents`;
-    const pitchState =
-      cents === null
-        ? "listening"
-        : Math.abs(cents) <= 30
-          ? "in tune"
-          : cents > 0
-            ? "sharp"
-            : "flat";
     const centsColor =
       cents === null
         ? "text-stage-300"
@@ -363,7 +484,14 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
           </div>
         </div>
 
-        <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div
+          role="progressbar"
+          aria-label="Performance progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(progress)}
+          className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/10"
+        >
           <div
             className="h-full rounded-full bg-gradient-to-r from-accent-500 to-accent-300 transition-[width] duration-200 ease-linear"
             style={{ width: `${progress}%` }}
@@ -375,17 +503,29 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-medium tracking-[0.2em] text-stage-300 uppercase">
-                  Pitch lane
+                  Pitch lane · concert pitch
                 </p>
                 <p className="mt-1 text-lg font-medium text-slate-100">
                   {currentNote ? midiToNoteName(currentNote.midi) : "—"}
                   <span className={`ml-3 text-sm font-normal ${centsColor}`}>{centsLabel}</span>
                 </p>
+                {currentNote?.lyric && (
+                  <p className="mt-1 text-sm font-medium text-accent-300">“{currentNote.lyric}”</p>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 {lastRating && lastEvaluation && (
-                  <span className={`text-sm font-semibold ${lastRating.text}`}>
-                    {lastRating.label}
+                  <span
+                    key={`${lastEvaluation.index}-${lastEvaluation.rating}`}
+                    className={`animate-pop text-sm font-semibold ${lastRating.text}`}
+                  >
+                    {lastRating.symbol} {lastRating.label}
+                  </span>
+                )}
+                {keyTranspose !== 0 && (
+                  <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[10px] font-medium tracking-wider text-stage-300 uppercase">
+                    Key {keyTranspose > 0 ? "+" : ""}
+                    {keyTranspose}
                   </span>
                 )}
                 <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[10px] font-medium tracking-wider text-stage-300 uppercase">
@@ -400,11 +540,12 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
               currentIndex={performance.currentIndex}
               currentCents={cents}
               evaluations={evaluations}
+              reducedMotion={reducedMotion}
             />
 
-            <p className="sr-only" aria-live="polite">
+            <p className="sr-only" aria-live="polite" aria-atomic="true">
               {currentNote
-                ? `Target ${midiToNoteName(currentNote.midi)}. ${pitchState}.`
+                ? `Target ${midiToNoteName(currentNote.midi)}.`
                 : "Waiting for the next note."}
             </p>
           </section>
@@ -421,11 +562,12 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
                 <span className="text-sm text-stage-300">/ {live?.maxPoints ?? 0}</span>
               </div>
               <div className="mt-2 text-sm text-stage-300">
-                {Math.round((live?.accuracy ?? 0) * 100)}% of completed notes
+                {Math.round((live?.accuracy ?? 0) * 100)}% points · {live?.notesHit ?? 0}/
+                {live?.evaluatedNotes ?? 0} notes
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Stat label="Streak" value={String(live?.longestStreak ?? 0)} accent />
+              <Stat label="Streak" value={String(live?.currentStreak ?? 0)} accent />
               <Stat label="Notes hit" value={String(live?.notesHit ?? 0)} />
             </div>
             <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-sm leading-relaxed text-stage-300">
@@ -439,22 +581,51 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
           <p className="text-xs text-slate-400">
             {config.guideEnabled
               ? "Guide melody is playing quietly under the backing."
-              : "Headphones recommended: the backing can leak into the microphone."}
+              : "Wired headphones recommended: the backing can leak into the microphone, and Bluetooth adds latency."}
           </p>
-          <Button variant="danger" onClick={handleExit}>
-            Forfeit &amp; exit
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button ref={pauseButtonRef} variant="secondary" onClick={handlePause}>
+              Pause
+            </Button>
+            <Button ref={forfeitButtonRef} variant="danger" onClick={handleExit}>
+              Forfeit &amp; exit
+            </Button>
+          </div>
         </div>
 
-        {confirmExit && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-stage-950/80 p-6 backdrop-blur"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="forfeit-title"
-          >
-            <div className="animate-pop w-full max-w-md rounded-3xl border border-white/10 bg-stage-900 p-6 shadow-2xl">
-              <h2 id="forfeit-title" className="text-2xl font-semibold tracking-tight">
+        <dialog
+          ref={dialogRef}
+          onCancel={(event) => {
+            event.preventDefault();
+            if (dialogMode === "pause") {
+              handleResume();
+            } else {
+              handleKeepPlaying();
+            }
+          }}
+          aria-labelledby="dialog-title"
+          className="m-auto w-full max-w-md rounded-3xl border border-white/10 bg-stage-900 p-6 text-left text-slate-100 shadow-2xl backdrop:bg-stage-950/80 backdrop:backdrop-blur"
+        >
+          {dialogMode === "pause" ? (
+            <>
+              <h2 id="dialog-title" className="text-2xl font-semibold tracking-tight">
+                Paused
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-stage-300">
+                The backing track and timer are paused. Resume when you are ready, or end the run.
+              </p>
+              <div className="mt-6 flex flex-wrap justify-end gap-3">
+                <Button autoFocus onClick={handleResume}>
+                  Resume
+                </Button>
+                <Button variant="danger" onClick={handleForfeit}>
+                  Forfeit &amp; exit
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 id="dialog-title" className="text-2xl font-semibold tracking-tight">
                 Forfeit this run?
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-stage-300">
@@ -462,22 +633,16 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
                 soundcheck.
               </p>
               <div className="mt-6 flex flex-wrap justify-end gap-3">
-                <Button autoFocus onClick={() => setConfirmExit(false)}>
+                <Button autoFocus onClick={handleKeepPlaying}>
                   Keep playing
                 </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => {
-                    setConfirmExit(false);
-                    performance.forfeit();
-                  }}
-                >
+                <Button variant="danger" onClick={handleForfeit}>
                   Forfeit &amp; exit
                 </Button>
               </div>
-            </div>
-          </div>
-        )}
+            </>
+          )}
+        </dialog>
       </div>
     );
   }
@@ -509,10 +674,20 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
           className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(52,211,153,0.16),transparent_70%)]"
         />
         <div className="relative">
-          <div className="grid grid-cols-2 gap-3 text-left sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 text-left sm:grid-cols-4">
             <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
-              <div className="text-[10px] tracking-widest text-stage-300 uppercase">Key</div>
+              <div className="text-[10px] tracking-widest text-stage-300 uppercase">Track key</div>
               <div className="mt-1 font-medium text-slate-100">{track.keySignature ?? "—"}</div>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
+              <div className="text-[10px] tracking-widest text-stage-300 uppercase">
+                Backing key
+              </div>
+              <div className="mt-1 font-medium text-slate-100">
+                {keyTranspose === 0
+                  ? "Original"
+                  : `${keyTranspose > 0 ? "+" : ""}${keyTranspose} st`}
+              </div>
             </div>
             <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
               <div className="text-[10px] tracking-widest text-stage-300 uppercase">Tempo</div>
@@ -528,8 +703,9 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
             </div>
           </div>
           <p className="mt-4 text-sm leading-relaxed text-stage-300">
-            The backing track starts after a short countdown. Keep the tab visible and use
-            headphones if you can, so the backing does not reach the microphone.
+            The backing track starts after a short countdown. Keep the tab visible and use wired
+            headphones if you can, so the backing does not reach the microphone. Bluetooth adds
+            latency.
           </p>
         </div>
       </div>
@@ -542,13 +718,18 @@ export function GameScreen({ config, track, onForfeit, onFinish }: GameScreenPro
         >
           Start performance
         </Button>
-        <button
-          type="button"
-          onClick={handleExit}
-          className="text-sm text-stage-300 transition hover:text-white"
-        >
-          ← Back to soundcheck
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Button variant="secondary" onClick={onPractice}>
+            Practice without scoring
+          </Button>
+          <button
+            type="button"
+            onClick={handleExit}
+            className="inline-flex min-h-11 items-center text-sm text-stage-300 transition hover:text-white"
+          >
+            ← Back to soundcheck
+          </button>
+        </div>
       </div>
     </div>
   );

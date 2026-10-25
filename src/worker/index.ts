@@ -6,10 +6,19 @@ import { TRACKS } from "./catalog";
  * Worker entry point.
  *
  * Static assets are served by Cloudflare before this Worker runs, except for
- * /api/* which is pinned to the Worker in wrangler.jsonc. Everything here is
- * same-origin JSON; no CORS middleware is needed.
+ * /api/* which is pinned to the Worker in wrangler.jsonc. The site is a
+ * single-page app at the root; `not_found_handling: "404-page"` ensures a
+ * missing audio or chart file returns a real 404 instead of index.html.
  */
 const app = new Hono();
+
+app.use("/api/*", async (c, next) => {
+  await next();
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("X-Frame-Options", "DENY");
+  c.header("Referrer-Policy", "no-referrer");
+  c.header("Cache-Control", "no-store");
+});
 
 app.get("/api/health", (c) => {
   const body: HealthResponse = {

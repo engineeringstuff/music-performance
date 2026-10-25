@@ -56,8 +56,14 @@ export function fitRange(notes: readonly TargetNote[], range: NoteRange): RangeF
   }
 
   if (best.outOfRangeNotes > 0) {
+    const octaves = Math.abs(best.semitones) / 12;
+    const direction = best.semitones > 0 ? "up" : "down";
     best.warning =
-      "This melody spans more than the instrument's comfortable range; the chart stays in its original octave.";
+      best.semitones === 0
+        ? "This melody spans more than the instrument's comfortable range; the chart stays in its original octave."
+        : `This melody spans more than the instrument's comfortable range; it was fitted ${direction} ${
+            octaves === 1 ? "an octave" : `${octaves} octaves`
+          }, leaving ${best.outOfRangeNotes} note${best.outOfRangeNotes === 1 ? "" : "s"} outside the range.`;
   }
   return best;
 }

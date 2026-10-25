@@ -1,0 +1,29 @@
+{
+  "id": "bach-minuet",
+  "title": "Minuet in G Major",
+  "artist": "Christian Petzold (attr. J. S. Bach)",
+  "difficulty": "hard",
+  "sourceInstrument": "piano",
+  "keySignature": "G major",
+  "tempoBpm": 140,
+  "licence": "Public domain",
+  "audioLicence": "CC0 1.0",
+  "attribution": "Minuet in G major (BWV Anh. 114), attributed to Christian Petzold, public domain. MIDI: Wikimedia Commons (public domain). Arrangement reduced to a single melody line and rendered for Music Performance.",
+  "sourceUrl": "https://commons.wikimedia.org/wiki/File:Bach_-_Minuet_in_G_Major.mid",
+  "source": "source.mid",
+  "sourceSha256": "fa49852ae9a657842313e23b84a42a3399a3ca2c1b289de93bd466b1a1d85331",
+  "soundfont": "FluidR3Mono_GM (see THIRD_PARTY_NOTICES; legal review pending)",
+  "program": 6,
+  "melody": {
+    "source": "melody.mid",
+    "voice": "melody"
+  },
+  "render": {
+    "kind": "voices",
+    "voicesFile": "voices.json",
+    "guideVoices": ["melody"],
+    "backingVoices": ["backing"],
+    "tailSec": 1.5
+  },
+  "transpositions": [-2, 0, 2]
+}

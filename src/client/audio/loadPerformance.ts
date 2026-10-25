@@ -1,4 +1,5 @@
-import type { TrackChart, TrackSummary } from "../../shared/domain";
+import type { TrackSummary } from "../../shared/domain";
+import { parseTrackChart } from "../lib/validate";
 
 async function fetchJson<T>(url: string, signal: AbortSignal): Promise<T> {
   const response = await fetch(url, { headers: { accept: "application/json" }, signal });
@@ -27,7 +28,7 @@ export interface LoadedPerformanceAudio {
 }
 
 export interface LoadedPerformance {
-  chart: TrackChart;
+  chart: ReturnType<typeof parseTrackChart>;
   audio: LoadedPerformanceAudio;
 }
 
@@ -35,16 +36,34 @@ export async function loadPerformance(
   context: AudioContext,
   track: TrackSummary,
   signal: AbortSignal,
+  options: { loadGuide?: boolean; transposeSemitones?: number } = {},
 ): Promise<LoadedPerformance> {
-  const [chart, backing, guide] = await Promise.all([
-    fetchJson<TrackChart>(track.chartUrl, signal),
-    decodeAudio(context, track.audioUrl, signal),
-    track.guideUrl ? decodeAudio(context, track.guideUrl, signal) : Promise.resolve(null),
-  ]);
-
-  if (chart.trackId !== track.id) {
-    throw new Error(`Chart ${chart.trackId} does not match track ${track.id}`);
+  const requestedTranspose = options.transposeSemitones ?? 0;
+  const variant = track.audioVariants?.find(
+    (candidate) => candidate.transposeSemitones === requestedTranspose,
+  );
+  if (track.audioVariants && !variant) {
+    throw new Error(`The backing key ${requestedTranspose} is not available for this track.`);
+  }
+  if (!track.audioVariants && requestedTranspose !== 0) {
+    throw new Error("This track does not ship pre-rendered key variants.");
+  }
+  const backingUrl = variant?.audioUrl ?? track.audioUrl;
+  const guideUrl = variant ? variant.guideUrl : track.guideUrl;
+  if (options.loadGuide && !guideUrl) {
+    throw new Error(`The guide stem is not available for backing key ${requestedTranspose}.`);
   }
 
-  return { chart, audio: { backing, guide } };
+  const [chart, backing, guide] = await Promise.all([
+    fetchJson<unknown>(track.chartUrl, signal),
+    decodeAudio(context, backingUrl, signal),
+    options.loadGuide && guideUrl ? decodeAudio(context, guideUrl, signal) : Promise.resolve(null),
+  ]);
+
+  const parsedChart = parseTrackChart(chart);
+  if (parsedChart.trackId !== track.id) {
+    throw new Error(`Chart ${parsedChart.trackId} does not match track ${track.id}`);
+  }
+
+  return { chart: parsedChart, audio: { backing, guide } };
 }

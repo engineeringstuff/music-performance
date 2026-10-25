@@ -1,99 +1,43 @@
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import type { TrackChart, TrackSummary } from "../../src/shared/domain.ts";
+import { buildCatalogueEntry, compareCatalogue, renderCatalogue } from "./catalogue.ts";
+import { buildChart, chartEndSec } from "./chart.ts";
+import { isAllowedAudioLicence, isAllowedLicence, licencePolicyMessage } from "./licence.ts";
+import { extractTracks, type WriteTrack, writeMidi } from "./midi.ts";
 import {
-  extractTracks,
-  noteEndSeconds,
-  noteStartSeconds,
-  parseMidi,
-  type WriteTrack,
-  writeMidi,
-} from "./midi.ts";
-
-const ROOT = path.resolve(import.meta.dirname, "../..");
-const CONTENT = path.join(ROOT, "content");
-const TRACKS_DIR = path.join(CONTENT, "tracks");
-const AUDIO_DIR = path.join(ROOT, "public", "audio");
-const CHART_DIR = path.join(ROOT, "public", "charts");
-const SOUNDFONT = path.join(CONTENT, "soundfont", "FluidR3Mono_GM.sf3");
-const SOUNDFONT_SHA = "2aacd036d7058d40a371846ef2f5dc5f130d648ab3837fe2626591ba49a71254";
-
-interface VoiceNote {
-  midi: number;
-  startBeats: number;
-  durationBeats: number;
-}
-
-interface VoicesFile {
-  tempoBpm: number;
-  timeSignature: [number, number];
-  voices: Record<string, VoiceNote[]>;
-}
-
-interface TrackManifest {
-  id: string;
-  title: string;
-  artist: string;
-  difficulty: "easy" | "medium" | "hard";
-  sourceInstrument: "vocals" | "piano" | "guitar" | "violin" | "flute";
-  keySignature?: string;
-  tempoBpm: number;
-  licence: string;
-  audioLicence: string;
-  attribution: string;
-  sourceUrl: string;
-  source: string;
-  sourceSha256: string;
-  sourceMidi?: string;
-  sourceMidiSha256?: string;
-  soundfont?: string;
-  melody: { source: string; voice: string };
-  render:
-    | {
-        kind: "voices";
-        voicesFile: string;
-        guideVoices: string[];
-        backingVoices: string[];
-        tailSec: number;
-      }
-    | {
-        kind: "tracks";
-        source: string;
-        melodyTracks: number[];
-        backingTracks: number[];
-        tailSec: number;
-      };
-}
+  AUDIO_DIR,
+  CHART_DIR,
+  type ContentLock,
+  LOCK_PATH,
+  LOCK_VERSION,
+  listManifests,
+  ROOT,
+  readJson,
+  SOUNDFONT,
+  SOUNDFONT_SHA,
+  sha256File,
+  sha256Value,
+  type TrackArtifacts,
+  type TrackLock,
+  type TrackManifest,
+  trackDir,
+  type VoicesFile,
+  writeJson,
+} from "./model.ts";
 
 interface TrackBuild {
   manifest: TrackManifest;
-  chart: TrackChart;
-  durationSec: number;
-  hasGuide: boolean;
-}
-
-function sha256File(file: string): string {
-  return createHash("sha256").update(readFileSync(file)).digest("hex");
-}
-
-function readJson<T>(file: string): T {
-  return JSON.parse(readFileSync(file, "utf8")) as T;
-}
-
-function writeJson(file: string, value: unknown): void {
-  mkdirSync(path.dirname(file), { recursive: true });
-  writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+  lock: TrackLock;
 }
 
 function run(command: string, args: string[], label: string): void {
@@ -145,6 +89,7 @@ function buildVoicesMidi(
   voiceNames: string[],
   output: string,
   startChannel: number,
+  program: number,
 ): void {
   const tracks: WriteTrack[] = voiceNames.map((name, index) => {
     const notes = voices.voices[name];
@@ -154,7 +99,7 @@ function buildVoicesMidi(
     return {
       name,
       channel: (startChannel + index) % 16,
-      program: 0,
+      program,
       notes,
     };
   });
@@ -167,97 +112,67 @@ function buildVoicesMidi(
   writeFileSync(output, midi);
 }
 
-function generateMidiFiles(manifest: TrackManifest, trackDir: string): void {
-  const melodyPath = path.join(trackDir, "melody.mid");
-  const backingPath = path.join(trackDir, "backing.mid");
+function generateMidiFiles(
+  manifest: TrackManifest,
+  directory: string,
+  outputDirectory: string,
+): void {
+  mkdirSync(outputDirectory, { recursive: true });
+  const melodyPath = path.join(outputDirectory, "melody.mid");
+  const backingPath = path.join(outputDirectory, "backing.mid");
 
   if (manifest.render.kind === "voices") {
-    const voices = readJson<VoicesFile>(path.join(trackDir, manifest.render.voicesFile));
+    const voices = readJson<VoicesFile>(path.join(directory, manifest.render.voicesFile));
     if (voices.tempoBpm !== manifest.tempoBpm) {
       throw new Error(
         `${manifest.id}: tempo mismatch between track.json (${manifest.tempoBpm}) and voices.json (${voices.tempoBpm})`,
       );
     }
-    buildVoicesMidi(voices, manifest.render.guideVoices, melodyPath, 0);
-    buildVoicesMidi(voices, manifest.render.backingVoices, backingPath, 1);
+    const program = manifest.program ?? 0;
+    if (!Number.isInteger(program) || program < 0 || program > 127) {
+      throw new Error(`${manifest.id}: program must be an integer 0..127`);
+    }
+    buildVoicesMidi(voices, manifest.render.guideVoices, melodyPath, 0, program);
+    buildVoicesMidi(voices, manifest.render.backingVoices, backingPath, 1, program);
     return;
   }
 
-  const sourcePath = path.join(trackDir, manifest.render.source);
+  const sourcePath = path.join(directory, manifest.render.source);
   const source = readFileSync(sourcePath);
   writeFileSync(melodyPath, extractTracks(source, manifest.render.melodyTracks));
   writeFileSync(backingPath, extractTracks(source, manifest.render.backingTracks));
 }
 
-function buildChart(manifest: TrackManifest, melodyPath: string): TrackChart {
-  const parsed = parseMidi(readFileSync(melodyPath));
-  if (parsed.notes.length === 0) {
-    throw new Error(`${manifest.id}: melody.mid has no notes`);
-  }
-
-  interface BuiltNote {
-    startSec: number;
-    durationSec: number;
-    midi: number;
-  }
-
-  const notes: BuiltNote[] = [];
-
-  for (const note of parsed.notes) {
-    const startSec = noteStartSeconds(parsed, note);
-    const endSec = noteEndSeconds(parsed, note);
-    const durationSec = endSec - startSec;
-    if (durationSec < 0.08) {
-      continue;
-    }
-
-    const previous = notes.at(-1);
-    if (previous && startSec < previous.startSec + previous.durationSec - 0.001) {
-      throw new Error(
-        `${manifest.id}: overlapping melody notes at ${startSec.toFixed(3)}s (${previous.midi} -> ${note.midi})`,
-      );
-    }
-
-    notes.push({
-      startSec: Math.round(startSec * 1000) / 1000,
-      durationSec: Math.round(durationSec * 1000) / 1000,
-      midi: note.midi,
-    });
-  }
-
-  if (notes.length === 0) {
-    throw new Error(`${manifest.id}: no chart notes survived filtering`);
-  }
-
-  return {
-    version: 1,
-    trackId: manifest.id,
-    sourceInstrument: manifest.sourceInstrument,
-    tempoBpm: manifest.tempoBpm,
-    ...(manifest.keySignature ? { keySignature: manifest.keySignature } : {}),
-    notes,
-  };
-}
-
-function renderStem(
-  midiPath: string,
-  outputPath: string,
-  durationSec: number,
-  tempDir: string,
-  label: string,
-): void {
-  const wavPath = path.join(tempDir, `${label}.wav`);
+function renderWav(midiPath: string, wavPath: string, label: string): void {
   run(
     "fluidsynth",
     ["-ni", "-F", wavPath, "-r", "44100", "-g", "0.7", SOUNDFONT, midiPath],
     `${label} FluidSynth render`,
   );
+}
 
+function encodeWav(
+  wavPath: string,
+  outputPath: string,
+  durationSec: number,
+  label: string,
+  transposeSemitones: number,
+  metadata: { title: string; artist: string; comment: string },
+): void {
   const fade = Math.min(0.15, durationSec / 4);
-  const filter = [
+  const filters: string[] = [];
+  if (transposeSemitones !== 0) {
+    const ratio = 2 ** (transposeSemitones / 12);
+    filters.push(
+      `asetrate=44100*${ratio.toFixed(10)}`,
+      "aresample=44100",
+      `atempo=${(1 / ratio).toFixed(10)}`,
+    );
+  }
+  filters.push(
     `afade=t=out:st=${Math.max(0, durationSec - fade).toFixed(3)}:d=${fade.toFixed(3)}`,
     "loudnorm=I=-18:TP=-1.5:LRA=11",
-  ].join(",");
+  );
 
   run(
     "ffmpeg",
@@ -268,7 +183,7 @@ function renderStem(
       "-t",
       durationSec.toFixed(3),
       "-af",
-      filter,
+      filters.join(","),
       "-ar",
       "44100",
       "-ac",
@@ -277,119 +192,258 @@ function renderStem(
       "libmp3lame",
       "-b:a",
       "128k",
+      "-id3v2_version",
+      "3",
+      "-metadata",
+      `title=${metadata.title}`,
+      "-metadata",
+      `artist=${metadata.artist}`,
+      "-metadata",
+      "album=Music Performance",
+      "-metadata",
+      `comment=${metadata.comment}`,
       outputPath,
     ],
-    `${label} MP3 encode`,
+    `${label} MP3 encode (${transposeSemitones} st)`,
   );
 }
 
-function buildTrack(manifest: TrackManifest, tempDir: string): TrackBuild {
-  const trackDir = path.join(TRACKS_DIR, manifest.id);
-  const sourcePath = path.join(trackDir, manifest.source);
+function roundSeconds(value: number): number {
+  return Math.ceil(value * 1000) / 1000;
+}
+
+function buildTrack(
+  manifest: TrackManifest,
+  tempDir: string,
+  audioDir: string,
+  chartDir: string,
+  midiDir: string,
+): TrackBuild {
+  if (!isAllowedLicence(manifest.licence)) {
+    throw new Error(`${manifest.id}: licence is not permitted. ${licencePolicyMessage()}`);
+  }
+  if (!isAllowedAudioLicence(manifest.audioLicence)) {
+    throw new Error(`${manifest.id}: audioLicence must be public domain or CC0`);
+  }
+  if (!manifest.attribution.trim() || !/^https?:\/\//.test(manifest.sourceUrl)) {
+    throw new Error(`${manifest.id}: attribution and an absolute sourceUrl are required`);
+  }
+
+  if (!/^[a-z0-9-]+$/.test(manifest.id)) {
+    throw new Error(`${manifest.id}: id must be lowercase kebab-case`);
+  }
+  const directory = trackDir(manifest.id);
+  if (path.basename(directory) !== manifest.id) {
+    throw new Error(`${manifest.id}: manifest id does not match its directory`);
+  }
+  const sourcePath = path.join(directory, manifest.source);
   if (!existsSync(sourcePath)) {
     throw new Error(`${manifest.id}: missing source file ${manifest.source}`);
   }
-  if (sha256File(sourcePath) !== manifest.sourceSha256) {
+  const sourceSha256 = sha256File(sourcePath);
+  if (sourceSha256 !== manifest.sourceSha256) {
     throw new Error(`${manifest.id}: source hash mismatch for ${manifest.source}`);
   }
+
+  let sourceMidiSha256: string | undefined;
   if (manifest.sourceMidi && manifest.sourceMidiSha256) {
-    const sourceMidiPath = path.join(trackDir, manifest.sourceMidi);
-    if (sha256File(sourceMidiPath) !== manifest.sourceMidiSha256) {
+    const sourceMidiPath = path.join(directory, manifest.sourceMidi);
+    sourceMidiSha256 = sha256File(sourceMidiPath);
+    if (sourceMidiSha256 !== manifest.sourceMidiSha256) {
       throw new Error(`${manifest.id}: source MIDI hash mismatch`);
     }
+  } else if (manifest.sourceMidi || manifest.sourceMidiSha256) {
+    throw new Error(`${manifest.id}: sourceMidi and sourceMidiSha256 must be provided together`);
+  }
+
+  let voicesSha256: string | undefined;
+  if (manifest.render.kind === "voices") {
+    const voicesPath = path.join(directory, manifest.render.voicesFile);
+    if (!existsSync(voicesPath)) {
+      throw new Error(`${manifest.id}: missing voices file ${manifest.render.voicesFile}`);
+    }
+    voicesSha256 = sha256File(voicesPath);
   }
 
   console.log(`Building ${manifest.id}…`);
-  generateMidiFiles(manifest, trackDir);
+  const midiOutput = path.join(midiDir, manifest.id);
+  generateMidiFiles(manifest, directory, midiOutput);
 
-  const melodyPath = path.join(trackDir, "melody.mid");
-  const backingPath = path.join(trackDir, "backing.mid");
-  const chart = buildChart(manifest, melodyPath);
-  const chartEnd = Math.max(...chart.notes.map((note) => note.startSec + note.durationSec));
-  const durationSec = Math.ceil((chartEnd + manifest.render.tailSec) * 1000) / 1000;
+  const melodyPath = path.join(midiOutput, "melody.mid");
+  const backingPath = path.join(midiOutput, "backing.mid");
+  const melodyMidi = readFileSync(melodyPath);
+  const chart = buildChart(manifest, melodyMidi);
+  const endSec = chartEndSec(chart);
+  const durationSec = roundSeconds(endSec + 0.5);
+  const renderDuration = roundSeconds(endSec + manifest.render.tailSec);
 
-  const backingMp3 = path.join(AUDIO_DIR, `${manifest.id}.backing.mp3`);
-  const guideMp3 = path.join(AUDIO_DIR, `${manifest.id}.guide.mp3`);
-  mkdirSync(AUDIO_DIR, { recursive: true });
-  mkdirSync(CHART_DIR, { recursive: true });
+  mkdirSync(audioDir, { recursive: true });
+  mkdirSync(chartDir, { recursive: true });
+  const chartPath = path.join(chartDir, `${manifest.id}.json`);
+  const hasGuide =
+    manifest.render.kind === "voices" ? manifest.render.guideVoices.length > 0 : true;
+  const transpositions = manifest.transpositions ?? [0];
+  if (!transpositions.includes(0)) {
+    throw new Error(`${manifest.id}: transpositions must include 0`);
+  }
+  if (new Set(transpositions).size !== transpositions.length) {
+    throw new Error(`${manifest.id}: duplicate transposition`);
+  }
+  for (const transpose of transpositions) {
+    if (!Number.isInteger(transpose) || Math.abs(transpose) > 12) {
+      throw new Error(`${manifest.id}: transposition ${transpose} must be an integer in -12..12`);
+    }
+  }
 
-  renderStem(backingPath, backingMp3, durationSec, tempDir, `${manifest.id}-backing`);
-  renderStem(melodyPath, guideMp3, durationSec, tempDir, `${manifest.id}-guide`);
+  const backingWav = path.join(tempDir, `${manifest.id}-backing.wav`);
+  const guideWav = path.join(tempDir, `${manifest.id}-guide.wav`);
+  renderWav(backingPath, backingWav, `${manifest.id}-backing`);
+  if (hasGuide) {
+    renderWav(melodyPath, guideWav, `${manifest.id}-guide`);
+  }
+  writeJson(chartPath, chart);
 
-  writeJson(path.join(CHART_DIR, `${manifest.id}.json`), chart);
+  const variants = transpositions.map((transpose) => {
+    const suffix = transpose === 0 ? "" : `.t${transpose}`;
+    const backingMp3 = path.join(audioDir, `${manifest.id}.backing${suffix}.mp3`);
+    const guideMp3 = path.join(audioDir, `${manifest.id}.guide${suffix}.mp3`);
+    const metadata = {
+      title: manifest.title,
+      artist: manifest.artist,
+      comment: `Licence: ${manifest.licence}. Rendered audio ${manifest.audioLicence}. Soundfont and track notices: /THIRD_PARTY_NOTICES.txt`,
+    };
+    encodeWav(backingWav, backingMp3, renderDuration, manifest.id, transpose, metadata);
+    if (hasGuide) {
+      encodeWav(guideWav, guideMp3, renderDuration, manifest.id, transpose, metadata);
+    }
+    const backingDuration = ffprobeDuration(backingMp3);
+    const guideDuration = hasGuide ? ffprobeDuration(guideMp3) : backingDuration;
+    const audioDurationSec = Math.round(Math.min(backingDuration, guideDuration) * 1000) / 1000;
+    if (audioDurationSec + 0.05 < endSec) {
+      throw new Error(`${manifest.id} (${transpose} st): rendered audio is shorter than the chart`);
+    }
+    if (audioDurationSec + 0.05 < durationSec) {
+      throw new Error(
+        `${manifest.id} (${transpose} st): rendered audio is shorter than the performance`,
+      );
+    }
+    return {
+      transposeSemitones: transpose,
+      backingMp3Sha256: sha256File(backingMp3),
+      guideMp3Sha256: hasGuide ? sha256File(guideMp3) : "",
+      audioDurationSec,
+    };
+  });
 
-  const backingDuration = ffprobeDuration(backingMp3);
-  const guideDuration = ffprobeDuration(guideMp3);
-  const finalDuration = Math.round(Math.min(backingDuration, guideDuration) * 1000) / 1000;
-
-  if (finalDuration + 0.05 < chartEnd) {
-    throw new Error(
-      `${manifest.id}: rendered audio (${finalDuration}s) is shorter than the chart (${chartEnd}s)`,
-    );
+  const base = variants.find((variant) => variant.transposeSemitones === 0);
+  if (!base) {
+    throw new Error(`${manifest.id}: missing zero-transpose variant`);
   }
 
   console.log(
-    `  ${chart.notes.length} notes, chart ends ${chartEnd.toFixed(2)}s, audio ${finalDuration.toFixed(2)}s`,
+    `  ${chart.notes.length} notes, chart ends ${endSec.toFixed(2)}s, ${variants.length} key(s), audio ${base.audioDurationSec.toFixed(2)}s`,
   );
 
-  return { manifest, chart, durationSec: finalDuration, hasGuide: true };
+  const renderConfigSha256 = sha256Value({
+    program: manifest.program ?? 0,
+    transpositions,
+    render: manifest.render,
+    lyrics: manifest.lyrics ?? null,
+    melody: manifest.melody,
+    tempoBpm: manifest.tempoBpm,
+    keySignature: manifest.keySignature ?? null,
+    sourceInstrument: manifest.sourceInstrument,
+  });
+
+  const artifacts: TrackArtifacts = {
+    sourceSha256,
+    renderConfigSha256,
+    ...(sourceMidiSha256 ? { sourceMidiSha256 } : {}),
+    ...(voicesSha256 ? { voicesSha256 } : {}),
+    melodySha256: sha256File(melodyPath),
+    backingMidiSha256: sha256File(backingPath),
+    chartSha256: sha256File(chartPath),
+    backingMp3Sha256: base.backingMp3Sha256,
+    guideMp3Sha256: base.guideMp3Sha256,
+    audioDurationSec: base.audioDurationSec,
+    durationSec,
+    variants,
+  };
+
+  return {
+    manifest,
+    lock: {
+      artifacts,
+      catalogue: buildCatalogueEntry(manifest, durationSec, hasGuide),
+    },
+  };
 }
 
-function writeCatalogue(tracks: TrackBuild[]): void {
-  const order = { easy: 0, medium: 1, hard: 2 };
-  tracks.sort(
-    (a, b) =>
-      order[a.manifest.difficulty] - order[b.manifest.difficulty] ||
-      a.manifest.title.localeCompare(b.manifest.title),
-  );
+function writeCatalogue(builds: TrackBuild[]): void {
+  builds.sort((a, b) => compareCatalogue(a.lock.catalogue, b.lock.catalogue));
+  const entries = builds.map((build) => build.lock.catalogue);
+  writeFileSync(path.join(ROOT, "src", "worker", "catalog.generated.ts"), renderCatalogue(entries));
 
-  const entries: TrackSummary[] = tracks.map(({ manifest, durationSec, hasGuide }) => ({
-    id: manifest.id,
-    title: manifest.title,
-    artist: manifest.artist,
-    durationSec,
-    difficulty: manifest.difficulty,
-    licence: manifest.licence,
-    attribution: manifest.attribution,
-    sourceUrl: manifest.sourceUrl,
-    audioUrl: `/audio/${manifest.id}.backing.mp3`,
-    ...(hasGuide ? { guideUrl: `/audio/${manifest.id}.guide.mp3` } : {}),
-    chartUrl: `/charts/${manifest.id}.json`,
-    ...(manifest.keySignature ? { keySignature: manifest.keySignature } : {}),
-    tempoBpm: manifest.tempoBpm,
-  }));
+  const lock: ContentLock = {
+    version: LOCK_VERSION,
+    tracks: Object.fromEntries(builds.map((build) => [build.manifest.id, build.lock])),
+  };
+  writeJson(LOCK_PATH, lock);
+  console.log(`Wrote ${entries.length} catalogue entries and content.lock.json.`);
+}
 
-  const output = [
-    "// Generated by `npm run content:build`. Do not edit by hand.",
-    'import type { TrackSummary } from "../shared/domain";',
-    "",
-    `export const TRACKS: TrackSummary[] = ${JSON.stringify(entries, null, 2)};`,
-    "",
-  ].join("\n");
-
-  writeFileSync(path.join(ROOT, "src", "worker", "catalog.generated.ts"), output);
-  console.log(`Wrote ${entries.length} catalogue entries.`);
+function publishDirectory(staging: string, target: string): void {
+  const backup = `${target}.content-backup`;
+  rmSync(backup, { recursive: true, force: true });
+  if (existsSync(target)) {
+    renameSync(target, backup);
+  }
+  try {
+    renameSync(staging, target);
+    rmSync(backup, { recursive: true, force: true });
+  } catch (error) {
+    if (existsSync(backup) && !existsSync(target)) {
+      renameSync(backup, target);
+    }
+    throw new Error(`Could not publish ${path.basename(target)}: ${String(error)}`);
+  }
 }
 
 function main(): void {
   checkTooling();
   const tempDir = mkdtempSync(path.join(tmpdir(), "music-performance-content-"));
-  try {
-    const manifestPaths = readdirSync(TRACKS_DIR, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => path.join(TRACKS_DIR, entry.name, "track.json"))
-      .filter((manifestPath) => existsSync(manifestPath));
+  const stagingRoot = path.join(ROOT, ".content-build");
+  const stagingAudio = path.join(stagingRoot, "audio");
+  const stagingCharts = path.join(stagingRoot, "charts");
+  rmSync(stagingRoot, { recursive: true, force: true });
+  mkdirSync(stagingAudio, { recursive: true });
+  mkdirSync(stagingCharts, { recursive: true });
 
-    if (manifestPaths.length === 0) {
+  try {
+    const manifests = listManifests();
+    if (manifests.length === 0) {
       throw new Error("No track manifests found in content/tracks");
     }
-
-    const builds = manifestPaths.map((manifestPath) =>
-      buildTrack(readJson<TrackManifest>(manifestPath), tempDir),
+    const stagingMidi = path.join(stagingRoot, "midi");
+    const builds = manifests.map(({ manifest }) =>
+      buildTrack(manifest, tempDir, stagingAudio, stagingCharts, stagingMidi),
     );
+
+    // Publish generated MIDI only after every track has built successfully.
+    for (const { manifest } of builds) {
+      const sourceDir = path.join(stagingMidi, manifest.id);
+      const targetDir = trackDir(manifest.id);
+      for (const file of ["melody.mid", "backing.mid"]) {
+        renameSync(path.join(sourceDir, file), path.join(targetDir, file));
+      }
+    }
+
+    publishDirectory(stagingAudio, AUDIO_DIR);
+    publishDirectory(stagingCharts, CHART_DIR);
     writeCatalogue(builds);
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
+    rmSync(stagingRoot, { recursive: true, force: true });
   }
 }
 

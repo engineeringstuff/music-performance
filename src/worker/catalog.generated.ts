@@ -6,45 +6,136 @@ export const TRACKS: TrackSummary[] = [
     "id": "twinkle",
     "title": "Twinkle, Twinkle, Little Star",
     "artist": "Traditional",
-    "durationSec": 30.233,
+    "durationSec": 29.3,
     "difficulty": "easy",
     "licence": "Public domain (traditional melody)",
+    "audioLicence": "CC0 1.0",
     "attribution": "Traditional melody (public domain). Original arrangement generated for Music Performance, released CC0 1.0.",
     "sourceUrl": "https://commons.wikimedia.org/wiki/File:Twinkle_Twinkle_Little_Star_plain.ogg",
     "audioUrl": "/audio/twinkle.backing.mp3",
     "guideUrl": "/audio/twinkle.guide.mp3",
+    "audioVariants": [
+      {
+        "transposeSemitones": -2,
+        "audioUrl": "/audio/twinkle.backing.t-2.mp3",
+        "guideUrl": "/audio/twinkle.guide.t-2.mp3"
+      },
+      {
+        "transposeSemitones": 0,
+        "audioUrl": "/audio/twinkle.backing.mp3",
+        "guideUrl": "/audio/twinkle.guide.mp3"
+      },
+      {
+        "transposeSemitones": 2,
+        "audioUrl": "/audio/twinkle.backing.t2.mp3",
+        "guideUrl": "/audio/twinkle.guide.t2.mp3"
+      }
+    ],
     "chartUrl": "/charts/twinkle.json",
     "keySignature": "C major",
-    "tempoBpm": 100
+    "tempoBpm": 100,
+    "soundfont": "FluidR3Mono_GM (see THIRD_PARTY_NOTICES; legal review pending)"
   },
   {
     "id": "greensleeves",
     "title": "Greensleeves",
     "artist": "Traditional",
-    "durationSec": 40.258,
+    "durationSec": 39.301,
     "difficulty": "medium",
     "licence": "Public domain",
+    "audioLicence": "CC0 1.0",
     "attribution": "Traditional English folk song (public domain). MIDI: Mutopia Project (public domain). Rendered arrangement made for Music Performance.",
     "sourceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1265",
     "audioUrl": "/audio/greensleeves.backing.mp3",
     "guideUrl": "/audio/greensleeves.guide.mp3",
+    "audioVariants": [
+      {
+        "transposeSemitones": -2,
+        "audioUrl": "/audio/greensleeves.backing.t-2.mp3",
+        "guideUrl": "/audio/greensleeves.guide.t-2.mp3"
+      },
+      {
+        "transposeSemitones": 0,
+        "audioUrl": "/audio/greensleeves.backing.mp3",
+        "guideUrl": "/audio/greensleeves.guide.mp3"
+      },
+      {
+        "transposeSemitones": 2,
+        "audioUrl": "/audio/greensleeves.backing.t2.mp3",
+        "guideUrl": "/audio/greensleeves.guide.t2.mp3"
+      }
+    ],
     "chartUrl": "/charts/greensleeves.json",
     "keySignature": "A minor",
-    "tempoBpm": 150
+    "tempoBpm": 150,
+    "soundfont": "FluidR3Mono_GM (see THIRD_PARTY_NOTICES; legal review pending)"
   },
   {
     "id": "ode-to-joy",
     "title": "Ode to Joy",
     "artist": "Ludwig van Beethoven",
-    "durationSec": 39.875,
+    "durationSec": 38.901,
     "difficulty": "medium",
     "licence": "Public domain",
+    "audioLicence": "CC0 1.0",
     "attribution": "Composition: Ludwig van Beethoven (public domain). MIDI and LilyPond: Mutopia Project (public domain). Rendered arrangement made for Music Performance.",
     "sourceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=528",
     "audioUrl": "/audio/ode-to-joy.backing.mp3",
     "guideUrl": "/audio/ode-to-joy.guide.mp3",
+    "audioVariants": [
+      {
+        "transposeSemitones": -2,
+        "audioUrl": "/audio/ode-to-joy.backing.t-2.mp3",
+        "guideUrl": "/audio/ode-to-joy.guide.t-2.mp3"
+      },
+      {
+        "transposeSemitones": 0,
+        "audioUrl": "/audio/ode-to-joy.backing.mp3",
+        "guideUrl": "/audio/ode-to-joy.guide.mp3"
+      },
+      {
+        "transposeSemitones": 2,
+        "audioUrl": "/audio/ode-to-joy.backing.t2.mp3",
+        "guideUrl": "/audio/ode-to-joy.guide.t2.mp3"
+      }
+    ],
     "chartUrl": "/charts/ode-to-joy.json",
     "keySignature": "G major",
-    "tempoBpm": 100
+    "tempoBpm": 100,
+    "soundfont": "FluidR3Mono_GM (see THIRD_PARTY_NOTICES; legal review pending)"
+  },
+  {
+    "id": "bach-minuet",
+    "title": "Minuet in G Major",
+    "artist": "Christian Petzold (attr. J. S. Bach)",
+    "durationSec": 41.643,
+    "difficulty": "hard",
+    "licence": "Public domain",
+    "audioLicence": "CC0 1.0",
+    "attribution": "Minuet in G major (BWV Anh. 114), attributed to Christian Petzold, public domain. MIDI: Wikimedia Commons (public domain). Arrangement reduced to a single melody line and rendered for Music Performance.",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Bach_-_Minuet_in_G_Major.mid",
+    "audioUrl": "/audio/bach-minuet.backing.mp3",
+    "guideUrl": "/audio/bach-minuet.guide.mp3",
+    "audioVariants": [
+      {
+        "transposeSemitones": -2,
+        "audioUrl": "/audio/bach-minuet.backing.t-2.mp3",
+        "guideUrl": "/audio/bach-minuet.guide.t-2.mp3"
+      },
+      {
+        "transposeSemitones": 0,
+        "audioUrl": "/audio/bach-minuet.backing.mp3",
+        "guideUrl": "/audio/bach-minuet.guide.mp3"
+      },
+      {
+        "transposeSemitones": 2,
+        "audioUrl": "/audio/bach-minuet.backing.t2.mp3",
+        "guideUrl": "/audio/bach-minuet.guide.t2.mp3"
+      }
+    ],
+    "chartUrl": "/charts/bach-minuet.json",
+    "keySignature": "G major",
+    "tempoBpm": 140,
+    "soundfont": "FluidR3Mono_GM (see THIRD_PARTY_NOTICES; legal review pending)"
   }
 ];

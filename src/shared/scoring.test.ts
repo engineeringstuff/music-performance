@@ -26,17 +26,19 @@ function framesFor(
     octaveShift?: number;
     voiceUntilSec?: number;
     vibratoCents?: number;
+    level?: number;
   } = {},
 ): PitchFrame[] {
   const fps = options.fps ?? FPS;
   const interval = 1 / fps;
   const clarity = options.clarity ?? 0.95;
+  const level = options.level ?? 0.5;
   const frames: PitchFrame[] = [];
   const end = startSec + durationSec;
 
   for (let time = startSec; time <= end + 1e-9; time += interval) {
     if (options.voiceUntilSec !== undefined && time > options.voiceUntilSec) {
-      frames.push({ timeSec: time, hz: 0, clarity: 0 });
+      frames.push({ timeSec: time, hz: 0, clarity: 0, level: 0 });
       continue;
     }
     const vibrato = options.vibratoCents
@@ -45,7 +47,7 @@ function framesFor(
     const cents = (options.centsOffset ?? 0) + vibrato;
     const frequency =
       midiToFrequency(targetMidi + (options.octaveShift ?? 0)) * 2 ** (cents / 1200);
-    frames.push({ timeSec: time, hz: frequency, clarity });
+    frames.push({ timeSec: time, hz: frequency, clarity, level });
   }
 
   return frames;
@@ -184,9 +186,38 @@ describe("scorePerformance", () => {
     expect(result.notesHit).toBe(1);
     expect(result.notesMissed).toBe(2);
     expect(result.longestStreak).toBe(1);
+    expect(result.currentStreak).toBe(0);
     expect(result.maxPoints).toBe(300);
     expect(result.accuracy).toBeGreaterThan(0.3);
     expect(result.accuracy).toBeLessThan(0.5);
+  });
+
+  it("does not grant timing credit to a held tone across repeated notes", () => {
+    const repeated: TargetNote[] = [
+      { startSec: 0, durationSec: 1, midi: 69 },
+      { startSec: 1, durationSec: 1, midi: 69 },
+    ];
+    const frames = framesFor(0, 2, 69);
+    const result = scorePerformance(repeated, frames);
+    expect(result.notes[0]?.score).toBeGreaterThan(95);
+    expect(result.notes[1]?.timingQuality).toBe(0);
+    expect(result.notes[1]?.score).toBe(0);
+  });
+
+  it("gives timing credit when a repeated pitch is re-articulated", () => {
+    const repeated: TargetNote[] = [
+      { startSec: 0, durationSec: 1, midi: 69 },
+      { startSec: 1, durationSec: 1, midi: 69 },
+    ];
+    const frames = framesFor(0, 2, 69);
+    for (const frame of frames) {
+      if (frame.timeSec >= 0.94 && frame.timeSec <= 1.06) {
+        frame.level = 0.02;
+      }
+    }
+    const result = scorePerformance(repeated, frames);
+    expect(result.notes[1]?.timingQuality).toBeGreaterThan(0.5);
+    expect(result.notes[1]?.score).toBeGreaterThan(50);
   });
 
   it("can score only completed notes for live updates", () => {
@@ -194,6 +225,7 @@ describe("scorePerformance", () => {
     const result = scorePerformance(notes, frames, undefined, 1.5);
     expect(result.notes).toHaveLength(1);
     expect(result.maxPoints).toBe(100);
+    expect(result.currentStreak).toBe(1);
     expect(result.accuracy).toBeCloseTo(1, 2);
   });
 
@@ -250,5 +282,123 @@ describe("chart range fitting", () => {
     expect(transposed[0]?.midi).toBe(62);
     expect(source[0]?.midi).toBe(60);
     expect(DEFAULT_SCORING.transposeSemitones).toBe(0);
+  });
+});
+
+describe("MIDI onset matching", () => {
+  function midiFrames(
+    events: { time: number; midi: number }[],
+    active: { start: number; end: number; midi: number }[],
+    end: number,
+  ): PitchFrame[] {
+    const frames: PitchFrame[] = [];
+    for (let time = 0; time <= end + 1e-9; time += 0.01) {
+      const note = active.find((candidate) => time >= candidate.start && time <= candidate.end);
+      const onset = events.find((event) => Math.abs(event.time - time) < 0.005);
+      frames.push({
+        timeSec: Number(time.toFixed(2)),
+        hz: note ? midiToFrequency(note.midi) : 0,
+        clarity: note ? 1 : 0,
+        level: note ? 1 : 0,
+        ...(onset ? { onset: true, onsetMidi: onset.midi } : {}),
+      });
+    }
+    return frames;
+  }
+
+  it("uses the matching note-on closest to the target, not the previous note", () => {
+    const notes = [
+      { startSec: 0, durationSec: 0.2, midi: 60 },
+      { startSec: 0.2, durationSec: 0.5, midi: 62 },
+    ];
+    const frames = midiFrames(
+      [
+        { time: 0, midi: 60 },
+        { time: 0.2, midi: 62 },
+      ],
+      [
+        { start: 0, end: 0.2, midi: 60 },
+        { start: 0.2, end: 0.7, midi: 62 },
+      ],
+      0.7,
+    );
+    const result = scorePerformance(notes, frames, { onsetRequired: true });
+    expect(result.notes[1]?.onsetErrorSec).toBeCloseTo(0, 6);
+    expect(result.notes[1]?.timingQuality).toBe(1);
+    expect(result.notes[1]?.score).toBeGreaterThan(95);
+  });
+
+  it("does not credit a held repeated note without a new note-on", () => {
+    const notes = [
+      { startSec: 0, durationSec: 0.5, midi: 60 },
+      { startSec: 0.5, durationSec: 0.5, midi: 60 },
+    ];
+    const frames = midiFrames([{ time: 0, midi: 60 }], [{ start: 0, end: 1, midi: 60 }], 1);
+    const result = scorePerformance(notes, frames, { onsetRequired: true });
+    expect(result.notes[1]?.timingQuality).toBe(0);
+    expect(result.notes[1]?.score).toBe(0);
+  });
+
+  it("does not credit an onset for a different pitch", () => {
+    const notes = [{ startSec: 0.5, durationSec: 0.5, midi: 62 }];
+    const frames = midiFrames([{ time: 0.5, midi: 60 }], [{ start: 0.5, end: 1, midi: 62 }], 1);
+    const result = scorePerformance(notes, frames, { onsetRequired: true });
+    expect(result.notes[0]?.timingQuality).toBe(0);
+  });
+});
+
+describe("scoring boundaries", () => {
+  it("keeps coverage meaningful at a low frame rate", () => {
+    const slowNote: TargetNote = { startSec: 0, durationSec: 2, midi: 69 };
+    const frames: PitchFrame[] = [0, 1, 2].map((timeSec) => ({
+      timeSec,
+      hz: midiToFrequency(69),
+      clarity: 1,
+      level: 0.5,
+    }));
+    const result = evaluateNote(slowNote, 0, frames);
+    expect(result.coverage).toBeCloseTo(1, 3);
+    expect(result.score).toBeGreaterThan(90);
+  });
+
+  it("applies a two-octave fit when required", () => {
+    const result = fitRange([{ startSec: 0, durationSec: 1, midi: 24 }], {
+      minMidi: 48,
+      maxMidi: 84,
+    });
+    expect(result.semitones).toBe(24);
+    expect(result.outOfRangeNotes).toBe(0);
+    expect(result.warning).toBeNull();
+  });
+
+  it("reports the number of notes left outside when a melody is too wide", () => {
+    const result = fitRange(
+      [
+        { startSec: 0, durationSec: 1, midi: 20 },
+        { startSec: 1, durationSec: 1, midi: 110 },
+      ],
+      { minMidi: 48, maxMidi: 84 },
+    );
+    expect(result.outOfRangeNotes).toBeGreaterThan(0);
+    expect(result.warning).toMatch(/outside the range|original octave/);
+  });
+
+  it("uses the full MIDI onset window boundaries", () => {
+    const frames: PitchFrame[] = [
+      {
+        timeSec: -0.05,
+        hz: midiToFrequency(69),
+        clarity: 1,
+        level: 0.5,
+        onset: true,
+        onsetMidi: 69,
+      },
+      { timeSec: 0.5, hz: midiToFrequency(69), clarity: 1, level: 0.5, onset: true, onsetMidi: 69 },
+    ];
+    const early = evaluateNote({ startSec: 0, durationSec: 1, midi: 69 }, 0, frames, {
+      onsetRequired: true,
+    });
+    expect(early.onsetErrorSec).toBeCloseTo(-0.05, 6);
+    expect(early.timingQuality).toBe(1);
   });
 });

@@ -7,6 +7,8 @@
 
 export type InstrumentId = "vocals" | "piano" | "guitar" | "violin" | "flute";
 
+export type InputMode = "microphone" | "midi";
+
 export interface NoteRange {
   /** Lowest playable MIDI note, inclusive. */
   minMidi: number;
@@ -24,6 +26,13 @@ export interface Instrument {
 
 export type TrackDifficulty = "easy" | "medium" | "hard";
 
+/** A pre-rendered backing/guide pair in a particular key. */
+export interface TrackAudioVariant {
+  transposeSemitones: number;
+  audioUrl: string;
+  guideUrl?: string;
+}
+
 /**
  * Metadata for a backing track. The audio and note chart are fetched lazily so
  * the setup screen does not download every track up front.
@@ -35,11 +44,17 @@ export interface TrackSummary {
   durationSec: number;
   difficulty: TrackDifficulty;
   licence: string;
+  /** Licence for the rendered audio (public domain or CC0). */
+  audioLicence?: string;
   attribution: string;
   sourceUrl: string;
+  /** Soundfont used to render the stems, with its licence. */
+  soundfont?: string;
   audioUrl: string;
   /** Melody-only guide stem, if the track ships one. */
   guideUrl?: string;
+  /** Pre-rendered keys; the zero-transpose entry matches audioUrl/guideUrl. */
+  audioVariants?: TrackAudioVariant[];
   chartUrl: string;
   keySignature?: string;
   tempoBpm?: number;
@@ -78,6 +93,10 @@ export interface GameConfig {
    * automatically to fit the player's range; 0 means "as written".
    */
   transposeSemitones: number;
+  /** The pre-rendered key selected before the run; octave fit is applied on top. */
+  keyTransposeSemitones?: number;
   /** Play the melody-only guide stem under the backing track. */
   guideEnabled: boolean;
+  /** Microphone is the default; MIDI is available where Web MIDI exists. */
+  inputMode?: InputMode;
 }

@@ -1,0 +1,277 @@
+{
+  "version": 1,
+  "tracks": {
+    "twinkle": {
+      "artifacts": {
+        "sourceSha256": "63819e52585c6ecc442534948d297210ea95e569e38d6edd57da7251fd3cb5c1",
+        "renderConfigSha256": "638c2003aa15e6cb3d99bcb58e284aa74a281cc2212829184da642683a093775",
+        "voicesSha256": "63819e52585c6ecc442534948d297210ea95e569e38d6edd57da7251fd3cb5c1",
+        "melodySha256": "07bd74aa05ec76275c4b419f825dda1faea96bb25ee41911682f53656ac36fe7",
+        "backingMidiSha256": "6e2f7fc515efcad774c3d890e555ecd26a37261cb500a25ab6da827bbd48dc56",
+        "chartSha256": "49171a9c8e12f1c4c4eb957257684839504172dfab052a5364fe874528f20398",
+        "backingMp3Sha256": "668884ec0da4c5ede63b5c6e28f192c166404a0626eca28bbc9341d7a58dc239",
+        "guideMp3Sha256": "a0c03525c56304c8ab5bcf3bd63659b491cb52f7473bd0581212825d34d80466",
+        "audioDurationSec": 30.215,
+        "durationSec": 29.3,
+        "variants": [
+          {
+            "transposeSemitones": -2,
+            "backingMp3Sha256": "1036e37629e73e56b4968138c7672a2061f0bf27e69b05210d144d15acd12637",
+            "guideMp3Sha256": "34b40ced63175bad1af8ca61e1d31e4c91bbe400c3d628f410f40bfbfdfe1497",
+            "audioDurationSec": 30.216
+          },
+          {
+            "transposeSemitones": 0,
+            "backingMp3Sha256": "668884ec0da4c5ede63b5c6e28f192c166404a0626eca28bbc9341d7a58dc239",
+            "guideMp3Sha256": "a0c03525c56304c8ab5bcf3bd63659b491cb52f7473bd0581212825d34d80466",
+            "audioDurationSec": 30.215
+          },
+          {
+            "transposeSemitones": 2,
+            "backingMp3Sha256": "1ff64b9387913169b2cbf568152d76e795cd05ae75f84aae542770538c6882d4",
+            "guideMp3Sha256": "66c1144b44f318c4df14dd73376e238a2a797862997fd187526b0bbf25dd00eb",
+            "audioDurationSec": 30.206
+          }
+        ]
+      },
+      "catalogue": {
+        "id": "twinkle",
+        "title": "Twinkle, Twinkle, Little Star",
+        "artist": "Traditional",
+        "durationSec": 29.3,
+        "difficulty": "easy",
+        "licence": "Public domain (traditional melody)",
+        "audioLicence": "CC0 1.0",
+        "attribution": "Traditional melody (public domain). Original arrangement generated for Music Performance, released CC0 1.0.",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Twinkle_Twinkle_Little_Star_plain.ogg",
+        "audioUrl": "/audio/twinkle.backing.mp3",
+        "guideUrl": "/audio/twinkle.guide.mp3",
+        "audioVariants": [
+          {
+            "transposeSemitones": -2,
+            "audioUrl": "/audio/twinkle.backing.t-2.mp3",
+            "guideUrl": "/audio/twinkle.guide.t-2.mp3"
+          },
+          {
+            "transposeSemitones": 0,
+            "audioUrl": "/audio/twinkle.backing.mp3",
+            "guideUrl": "/audio/twinkle.guide.mp3"
+          },
+          {
+            "transposeSemitones": 2,
+            "audioUrl": "/audio/twinkle.backing.t2.mp3",
+            "guideUrl": "/audio/twinkle.guide.t2.mp3"
+          }
+        ],
+        "chartUrl": "/charts/twinkle.json",
+        "keySignature": "C major",
+        "tempoBpm": 100,
+        "soundfont": "FluidR3Mono_GM (see THIRD_PARTY_NOTICES; legal review pending)"
+      }
+    },
+    "greensleeves": {
+      "artifacts": {
+        "sourceSha256": "ec448ae781be40fdc2ddb24f734d7212d7ea5722616999cccbaf74998e1d34d0",
+        "renderConfigSha256": "2e6a19dc5b832de3d260dab8098d63b0cced34b667b8869a7ec5b117d9ad189f",
+        "melodySha256": "cd7f53ce553185f8d6b7903f7ec979b5157fadb40e54930ed4b6ac9a3bd39c81",
+        "backingMidiSha256": "75a0f927fb582d34b3d25b3271cc31fa4504b5c7dbcb2dfc06512a571c69d645",
+        "chartSha256": "28f9997c40601b271e3f0ea7e9fd563ce17c09718f04bb47729246d85fe0a1be",
+        "backingMp3Sha256": "20131b2ef7c0c2f640ad3fba465d2141e0657f66e7c1bed38f9895f41ce6f523",
+        "guideMp3Sha256": "ee9248ae442c557c36addaa90ba7a1bf5f2c4dffaef54cf91c9018506155cfdf",
+        "audioDurationSec": 40.258,
+        "durationSec": 39.301,
+        "variants": [
+          {
+            "transposeSemitones": -2,
+            "backingMp3Sha256": "1c6e3de5ba4ed01d312693582d32d9d203ec189ea1cde4115e900e2c44e3b3f7",
+            "guideMp3Sha256": "dd82c67d3e47f520d5e33322a0a3e0d2264dc662d99b6202e3c28bc02bd62fc0",
+            "audioDurationSec": 40.239
+          },
+          {
+            "transposeSemitones": 0,
+            "backingMp3Sha256": "20131b2ef7c0c2f640ad3fba465d2141e0657f66e7c1bed38f9895f41ce6f523",
+            "guideMp3Sha256": "ee9248ae442c557c36addaa90ba7a1bf5f2c4dffaef54cf91c9018506155cfdf",
+            "audioDurationSec": 40.258
+          },
+          {
+            "transposeSemitones": 2,
+            "backingMp3Sha256": "001e1c76096a27aecf13515a44ee62f382bde3e837a191cb082e5593156206dd",
+            "guideMp3Sha256": "47780a45857d61e123ce9b1ed08be2ee6b91665ff7a662093882be54ddb51b88",
+            "audioDurationSec": 40.23
+          }
+        ]
+      },
+      "catalogue": {
+        "id": "greensleeves",
+        "title": "Greensleeves",
+        "artist": "Traditional",
+        "durationSec": 39.301,
+        "difficulty": "medium",
+        "licence": "Public domain",
+        "audioLicence": "CC0 1.0",
+        "attribution": "Traditional English folk song (public domain). MIDI: Mutopia Project (public domain). Rendered arrangement made for Music Performance.",
+        "sourceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1265",
+        "audioUrl": "/audio/greensleeves.backing.mp3",
+        "guideUrl": "/audio/greensleeves.guide.mp3",
+        "audioVariants": [
+          {
+            "transposeSemitones": -2,
+            "audioUrl": "/audio/greensleeves.backing.t-2.mp3",
+            "guideUrl": "/audio/greensleeves.guide.t-2.mp3"
+          },
+          {
+            "transposeSemitones": 0,
+            "audioUrl": "/audio/greensleeves.backing.mp3",
+            "guideUrl": "/audio/greensleeves.guide.mp3"
+          },
+          {
+            "transposeSemitones": 2,
+            "audioUrl": "/audio/greensleeves.backing.t2.mp3",
+            "guideUrl": "/audio/greensleeves.guide.t2.mp3"
+          }
+        ],
+        "chartUrl": "/charts/greensleeves.json",
+        "keySignature": "A minor",
+        "tempoBpm": 150,
+        "soundfont": "FluidR3Mono_GM (see THIRD_PARTY_NOTICES; legal review pending)"
+      }
+    },
+    "ode-to-joy": {
+      "artifacts": {
+        "sourceSha256": "a0c865aa9f71221605362622d281405071e0734540e86ce131131757cc803a71",
+        "renderConfigSha256": "133ae92f709a9266f119ead5d5c14bb72fd636eff079f08a58fe3e2d3ef61742",
+        "sourceMidiSha256": "fb1604c08c865b275b464d74e5a7c526ff1a8acccdf9853cb92f0778daaed14b",
+        "voicesSha256": "5b151d75f0acda9070d2b747274446a30b23557dff3e1e41a131263f4ff5dd88",
+        "melodySha256": "fb99f55cbff8a561f2dd5d39b5628b5714b95d79713a0a31127818c1643dddb9",
+        "backingMidiSha256": "f4125b3789474573f56e5356b6ecab3beeebbbadffda9f81ef4ba6d3f561bf07",
+        "chartSha256": "f29689c9e7a321eb78f047cae74e31ac5821a62fb60f6d18fd2128bc1292fca0",
+        "backingMp3Sha256": "28dc78d95179868030e82ae58bc05a2f6110e24bbdc0ca8bd76999836d27939b",
+        "guideMp3Sha256": "9683376c13a9329bd35e1a66482b9f9db237abab262461add483bfc3d32c5ace",
+        "audioDurationSec": 39.875,
+        "durationSec": 38.901,
+        "variants": [
+          {
+            "transposeSemitones": -2,
+            "backingMp3Sha256": "869767e206352b07097bf5eb16f8ed68bfaa5e0c4d8ad3c0e0cea7add68c3661",
+            "guideMp3Sha256": "ccfadf9132aca433ddd131e9a652f19af792c4b19fe9200a646d7c30e64be22e",
+            "audioDurationSec": 39.854
+          },
+          {
+            "transposeSemitones": 0,
+            "backingMp3Sha256": "28dc78d95179868030e82ae58bc05a2f6110e24bbdc0ca8bd76999836d27939b",
+            "guideMp3Sha256": "9683376c13a9329bd35e1a66482b9f9db237abab262461add483bfc3d32c5ace",
+            "audioDurationSec": 39.875
+          },
+          {
+            "transposeSemitones": 2,
+            "backingMp3Sha256": "416e85c16925c896880d4d57ea27602270eb22e63813bce85e0131a5323979bd",
+            "guideMp3Sha256": "7ad158dff4a0893f07f01acce9ba90b524ab1063d603f16db37e19de5c601547",
+            "audioDurationSec": 39.846
+          }
+        ]
+      },
+      "catalogue": {
+        "id": "ode-to-joy",
+        "title": "Ode to Joy",
+        "artist": "Ludwig van Beethoven",
+        "durationSec": 38.901,
+        "difficulty": "medium",
+        "licence": "Public domain",
+        "audioLicence": "CC0 1.0",
+        "attribution": "Composition: Ludwig van Beethoven (public domain). MIDI and LilyPond: Mutopia Project (public domain). Rendered arrangement made for Music Performance.",
+        "sourceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=528",
+        "audioUrl": "/audio/ode-to-joy.backing.mp3",
+        "guideUrl": "/audio/ode-to-joy.guide.mp3",
+        "audioVariants": [
+          {
+            "transposeSemitones": -2,
+            "audioUrl": "/audio/ode-to-joy.backing.t-2.mp3",
+            "guideUrl": "/audio/ode-to-joy.guide.t-2.mp3"
+          },
+          {
+            "transposeSemitones": 0,
+            "audioUrl": "/audio/ode-to-joy.backing.mp3",
+            "guideUrl": "/audio/ode-to-joy.guide.mp3"
+          },
+          {
+            "transposeSemitones": 2,
+            "audioUrl": "/audio/ode-to-joy.backing.t2.mp3",
+            "guideUrl": "/audio/ode-to-joy.guide.t2.mp3"
+          }
+        ],
+        "chartUrl": "/charts/ode-to-joy.json",
+        "keySignature": "G major",
+        "tempoBpm": 100,
+        "soundfont": "FluidR3Mono_GM (see THIRD_PARTY_NOTICES; legal review pending)"
+      }
+    },
+    "bach-minuet": {
+      "artifacts": {
+        "sourceSha256": "fa49852ae9a657842313e23b84a42a3399a3ca2c1b289de93bd466b1a1d85331",
+        "renderConfigSha256": "f520b13cb12a365137552c1f6b36dbf91b0dbcf00f2cb5513533fdf5478b0007",
+        "voicesSha256": "557d1ec51640753fb2cc1af58fdc8e84556162c323082e771f98a2c063c121d7",
+        "melodySha256": "c7c86ebd0c8badd925e41d262e7d4e7a23ddb3836b87a5cc839978ced0372081",
+        "backingMidiSha256": "8c6c6f24fce6caf77229a44f6ca4b2c3c1f03fd9e58847f86bd87f57fce7e01e",
+        "chartSha256": "0ca0ebb510c613a80dc54133b54d70e5ede6387a7f99b10dad291ae4b0a6c01a",
+        "backingMp3Sha256": "2a272ab93b9509ad5302da0472668033af8f93ef69a18d78c2d76d2ed40abf71",
+        "guideMp3Sha256": "20aef129ae55452b5f3318e965fd4aea020fcc29bc9c3a430b365a242decf090",
+        "audioDurationSec": 42.544,
+        "durationSec": 41.643,
+        "variants": [
+          {
+            "transposeSemitones": -2,
+            "backingMp3Sha256": "d202a555f45c177b07154682e1fa198abc5fb839b5abf60b6dca492c23e6732b",
+            "guideMp3Sha256": "1d572787f482489c89b52c9f752402add0aa894a3cbef39fd1d8bfd7924bded3",
+            "audioDurationSec": 42.555
+          },
+          {
+            "transposeSemitones": 0,
+            "backingMp3Sha256": "2a272ab93b9509ad5302da0472668033af8f93ef69a18d78c2d76d2ed40abf71",
+            "guideMp3Sha256": "20aef129ae55452b5f3318e965fd4aea020fcc29bc9c3a430b365a242decf090",
+            "audioDurationSec": 42.544
+          },
+          {
+            "transposeSemitones": 2,
+            "backingMp3Sha256": "0131e58492df9ff4adc40c849f41522f55d9dee8151594d5e2851aaeba2b1c80",
+            "guideMp3Sha256": "943fe61138086326a7b7f5d1a803d635aea8e78ef70520740c8c9c1aff86a502",
+            "audioDurationSec": 42.596
+          }
+        ]
+      },
+      "catalogue": {
+        "id": "bach-minuet",
+        "title": "Minuet in G Major",
+        "artist": "Christian Petzold (attr. J. S. Bach)",
+        "durationSec": 41.643,
+        "difficulty": "hard",
+        "licence": "Public domain",
+        "audioLicence": "CC0 1.0",
+        "attribution": "Minuet in G major (BWV Anh. 114), attributed to Christian Petzold, public domain. MIDI: Wikimedia Commons (public domain). Arrangement reduced to a single melody line and rendered for Music Performance.",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Bach_-_Minuet_in_G_Major.mid",
+        "audioUrl": "/audio/bach-minuet.backing.mp3",
+        "guideUrl": "/audio/bach-minuet.guide.mp3",
+        "audioVariants": [
+          {
+            "transposeSemitones": -2,
+            "audioUrl": "/audio/bach-minuet.backing.t-2.mp3",
+            "guideUrl": "/audio/bach-minuet.guide.t-2.mp3"
+          },
+          {
+            "transposeSemitones": 0,
+            "audioUrl": "/audio/bach-minuet.backing.mp3",
+            "guideUrl": "/audio/bach-minuet.guide.mp3"
+          },
+          {
+            "transposeSemitones": 2,
+            "audioUrl": "/audio/bach-minuet.backing.t2.mp3",
+            "guideUrl": "/audio/bach-minuet.guide.t2.mp3"
+          }
+        ],
+        "chartUrl": "/charts/bach-minuet.json",
+        "keySignature": "G major",
+        "tempoBpm": 140,
+        "soundfont": "FluidR3Mono_GM (see THIRD_PARTY_NOTICES; legal review pending)"
+      }
+    }
+  }
+}

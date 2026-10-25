@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, Ref } from "react";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "md" | "lg" | "xl";
@@ -21,6 +21,7 @@ const SIZES: Record<Size, string> = {
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 export function Button({
@@ -28,17 +29,22 @@ export function Button({
   size = "md",
   className = "",
   type = "button",
+  disabled = false,
+  ref,
   ...props
 }: ButtonProps) {
   return (
     <button
+      ref={ref}
       type={type}
+      disabled={disabled}
       className={[
         "inline-flex items-center justify-center gap-2 rounded-full font-semibold tracking-tight",
         "transition duration-200 ease-out focus-visible:outline-none focus-visible:ring-2",
         "focus-visible:ring-accent-300 focus-visible:ring-offset-2 focus-visible:ring-offset-stage-950",
-        "disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none",
-        VARIANTS[variant],
+        disabled
+          ? "cursor-not-allowed border-white/10 bg-white/[0.06] text-slate-400 shadow-none"
+          : VARIANTS[variant],
         SIZES[size],
         className,
       ].join(" ")}
