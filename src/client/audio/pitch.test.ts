@@ -18,6 +18,20 @@ function fakeStream(stop: () => void, latency = 0.02): MediaStream {
   } as unknown as MediaStream;
 }
 
+function sineAnalyser(hz: number, amplitude = 0.5): AnalyserNode {
+  return {
+    fftSize: 0,
+    smoothingTimeConstant: 0,
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    getFloatTimeDomainData: (target: Float32Array) => {
+      for (let index = 0; index < target.length; index += 1) {
+        target[index] = amplitude * Math.sin((2 * Math.PI * hz * index) / 44100);
+      }
+    },
+  } as unknown as AnalyserNode;
+}
+
 function fakeContext(options: { throwOnSource?: boolean; analyser?: AnalyserNode } = {}) {
   const analyser =
     options.analyser ??
@@ -94,6 +108,99 @@ describe("MicrophonePitchSource", () => {
     expect(stop).toHaveBeenCalledTimes(1);
   });
 
+  it("requests echo cancellation only when it is configured", async () => {
+    const getUserMedia = vi.fn(async () => fakeStream(vi.fn()));
+    vi.stubGlobal("navigator", { mediaDevices: { getUserMedia } });
+
+    const raw = new MicrophonePitchSource(fakeContext());
+    await raw.connect();
+    expect(getUserMedia).toHaveBeenLastCalledWith({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+      },
+    });
+    raw.disconnect();
+
+    const speakers = new MicrophonePitchSource(fakeContext(), 0, true);
+    await speakers.connect();
+    expect(getUserMedia).toHaveBeenLastCalledWith({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+      },
+    });
+    speakers.disconnect();
+  });
+
+  it("preserves processing constraints when the preferred constraints are rejected", async () => {
+    const getUserMedia = vi
+      .fn()
+      .mockRejectedValueOnce(new DOMException("unsupported", "OverconstrainedError"))
+      .mockResolvedValueOnce(fakeStream(vi.fn()));
+    vi.stubGlobal("navigator", { mediaDevices: { getUserMedia } });
+
+    const source = new MicrophonePitchSource(fakeContext(), 0, true);
+    await source.connect();
+    expect(getUserMedia).toHaveBeenLastCalledWith({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: false,
+        autoGainControl: false,
+      },
+    });
+    source.disconnect();
+  });
+
+  it("rejects pitches outside the musical range and very quiet input", async () => {
+    vi.stubGlobal("navigator", {
+      mediaDevices: { getUserMedia: vi.fn(async () => fakeStream(vi.fn())) },
+    });
+
+    const low = new MicrophonePitchSource(fakeContext({ analyser: sineAnalyser(30) }));
+    await low.connect();
+    expect(low.read(1).hz).toBe(0);
+    low.disconnect();
+
+    const high = new MicrophonePitchSource(fakeContext({ analyser: sineAnalyser(2500) }));
+    await high.connect();
+    expect(high.read(1).hz).toBe(0);
+    high.disconnect();
+
+    const quiet = new MicrophonePitchSource(fakeContext({ analyser: sineAnalyser(440, 0.001) }));
+    await quiet.connect();
+    expect(quiet.read(1).hz).toBe(0);
+    quiet.disconnect();
+  });
+
+  it("prefers the fundamental when strong harmonics are present", async () => {
+    vi.stubGlobal("navigator", {
+      mediaDevices: { getUserMedia: vi.fn(async () => fakeStream(vi.fn())) },
+    });
+    const analyser = {
+      fftSize: 0,
+      smoothingTimeConstant: 0,
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      getFloatTimeDomainData: (target: Float32Array) => {
+        for (let index = 0; index < target.length; index += 1) {
+          const phase = (2 * Math.PI * 200 * index) / 44100;
+          target[index] =
+            0.3 * Math.sin(phase) + 0.3 * Math.sin(2 * phase) + 0.25 * Math.sin(3 * phase);
+        }
+      },
+    } as unknown as AnalyserNode;
+
+    const source = new MicrophonePitchSource(fakeContext({ analyser }));
+    await source.connect();
+    expect(source.read(1).hz).toBeCloseTo(200, 0);
+    source.disconnect();
+  });
+
   it("stops the stream if the audio context rejects the source", async () => {
     const stop = vi.fn();
     vi.stubGlobal("navigator", {
@@ -111,17 +218,7 @@ describe("MicrophonePitchSource", () => {
       mediaDevices: { getUserMedia: vi.fn(async () => fakeStream(stop, 0)) },
     });
 
-    const analyser = {
-      fftSize: 0,
-      smoothingTimeConstant: 0,
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-      getFloatTimeDomainData: (target: Float32Array) => {
-        for (let index = 0; index < target.length; index += 1) {
-          target[index] = 0.5 * Math.sin((2 * Math.PI * 440 * index) / 44100);
-        }
-      },
-    } as unknown as AnalyserNode;
+    const analyser = sineAnalyser(440);
 
     const source = new MicrophonePitchSource(fakeContext({ analyser }));
     await source.connect();

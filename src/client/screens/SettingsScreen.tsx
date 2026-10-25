@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../components/Button";
 import {
+  clearPitchDiagnostics,
+  isPitchDiagnosticsEnabled,
+  readPitchDiagnostics,
+  setPitchDiagnosticsEnabled,
+} from "../lib/pitchDiagnostics";
+import {
   type AudioSettings,
   clearDiagnostics,
   type DiagnosticEntry,
@@ -24,6 +30,11 @@ export function SettingsScreen({ onBack, onCleared }: SettingsScreenProps) {
   const [latencyMs, setLatencyMs] = useState(() => loadLatencyOffsetMs());
   const [resultCount, setResultCount] = useState<number | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticEntry[]>(() => readDiagnostics());
+  const [pitchDiagnosticsEnabled, setPitchDiagnosticsEnabledState] = useState(() =>
+    isPitchDiagnosticsEnabled(),
+  );
+  const [pitchDiagnostics, setPitchDiagnostics] = useState(() => readPitchDiagnostics());
+  const [pitchCopied, setPitchCopied] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +72,7 @@ export function SettingsScreen({ onBack, onCleared }: SettingsScreenProps) {
     const clamped = {
       backingVolume: Math.min(1, Math.max(0, next.backingVolume)),
       guideVolume: Math.min(1, Math.max(0, next.guideVolume)),
+      echoCancellation: next.echoCancellation === true,
     };
     setAudio(clamped);
     saveAudioSettings(clamped);
@@ -85,6 +97,41 @@ export function SettingsScreen({ onBack, onCleared }: SettingsScreenProps) {
     } finally {
       setClearing(false);
     }
+  };
+
+  const updatePitchDiagnostics = (enabled: boolean) => {
+    setPitchDiagnosticsEnabled(enabled);
+    setPitchDiagnosticsEnabledState(enabled);
+    setPitchDiagnostics(readPitchDiagnostics());
+  };
+
+  const copyPitchDiagnostics = async () => {
+    if (!pitchDiagnostics) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(pitchDiagnostics));
+      setPitchCopied(true);
+      window.setTimeout(() => setPitchCopied(false), 1500);
+    } catch {
+      logDiagnostic("Could not copy pitch diagnostics to the clipboard");
+      setError("Could not copy pitch diagnostics.");
+    }
+  };
+
+  const downloadPitchDiagnostics = () => {
+    if (!pitchDiagnostics) {
+      return;
+    }
+    const blob = new Blob([JSON.stringify(pitchDiagnostics, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `music-performance-pitch-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   const copyDiagnostics = async () => {
@@ -128,8 +175,8 @@ export function SettingsScreen({ onBack, onCleared }: SettingsScreenProps) {
           </li>
           <li>Audio and timing preferences in localStorage.</li>
           <li>
-            Session diagnostics are kept in sessionStorage for this tab only; they are never
-            uploaded.
+            Session diagnostics and optional pitch diagnostics are kept in sessionStorage for this
+            tab only; they are never uploaded.
           </li>
         </ul>
         <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -166,7 +213,7 @@ export function SettingsScreen({ onBack, onCleared }: SettingsScreenProps) {
       </section>
 
       <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.02] p-5">
-        <h2 className="text-lg font-semibold text-slate-100">Sound levels</h2>
+        <h2 className="text-lg font-semibold text-slate-100">Sound and microphone</h2>
         <p className="mt-2 text-sm text-stage-300">
           These apply to the next performance. The guide is still toggled per run in setup.
         </p>
@@ -195,6 +242,22 @@ export function SettingsScreen({ onBack, onCleared }: SettingsScreenProps) {
             }
             className="mt-2 block w-full accent-emerald-400"
           />
+        </label>
+        <label className="mt-5 flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-sm">
+          <input
+            type="checkbox"
+            checked={audio.echoCancellation}
+            onChange={(event) => updateAudio({ ...audio, echoCancellation: event.target.checked })}
+            className="mt-0.5 h-4 w-4 accent-emerald-400"
+          />
+          <span>
+            <span className="font-medium text-slate-200">Echo cancellation</span>
+            <span className="mt-1 block text-xs leading-relaxed text-stage-300">
+              On by default to reduce backing bleed through speakers. It asks the browser to
+              subtract the backing from the microphone input. Turn it off with headphones if
+              sustained notes sound thin.
+            </span>
+          </span>
         </label>
       </section>
 
@@ -250,6 +313,60 @@ export function SettingsScreen({ onBack, onCleared }: SettingsScreenProps) {
             Clear diagnostics
           </Button>
         </div>
+      </section>
+
+      <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.02] p-5">
+        <h2 className="text-lg font-semibold text-slate-100">Pitch diagnostics (debug)</h2>
+        <p className="mt-2 text-sm leading-relaxed text-stage-300">
+          Local-only. Records numeric pitch frames (frequency, clarity, level, target and displayed
+          pitch, octave shift and ball position) plus the microphone label and the browser-reported
+          audio settings. It does not record audio, your player name or device IDs.
+        </p>
+        <label className="mt-4 flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={pitchDiagnosticsEnabled}
+            onChange={(event) => updatePitchDiagnostics(event.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-emerald-400"
+          />
+          <span>
+            <span className="font-medium text-slate-200">Record the next performance</span>
+            <span className="mt-1 block text-xs leading-relaxed text-stage-300">
+              Enable this, play a run, then return here to copy or download the capture. The next
+              run replaces the previous capture.
+            </span>
+          </span>
+        </label>
+        {pitchDiagnostics ? (
+          <div className="mt-4">
+            <p className="text-sm text-stage-300">
+              Captured {pitchDiagnostics.frames.length} frames starting{" "}
+              {new Date(pitchDiagnostics.startedAt).toLocaleString()}
+              {pitchDiagnostics.truncated ? " (truncated)" : ""}.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <Button variant="secondary" onClick={() => void copyPitchDiagnostics()}>
+                {pitchCopied ? "Copied" : "Copy pitch diagnostics"}
+              </Button>
+              <Button variant="secondary" onClick={downloadPitchDiagnostics}>
+                Download JSON
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  clearPitchDiagnostics();
+                  setPitchDiagnostics(null);
+                }}
+              >
+                Clear pitch diagnostics
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-stage-300">
+            No pitch diagnostics captured. Enable the option above and play a performance.
+          </p>
+        )}
       </section>
 
       <p className="mt-6 text-sm text-stage-300">

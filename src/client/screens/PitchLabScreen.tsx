@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { frequencyToMidi, midiToNoteName } from "../../shared/music";
 import { MicrophonePitchSource } from "../audio/pitch";
 import { Button } from "../components/Button";
+import { loadAudioSettings } from "../lib/preferences";
 
 interface PitchLabScreenProps {
   onBack: () => void;
@@ -70,7 +71,11 @@ export function PitchLabScreen({ onBack }: PitchLabScreenProps) {
       const context = new AudioContext({ latencyHint: "interactive" });
       contextRef.current = context;
       await context.resume();
-      const microphone = new MicrophonePitchSource(context);
+      const microphone = new MicrophonePitchSource(
+        context,
+        0,
+        loadAudioSettings().echoCancellation,
+      );
       microphoneRef.current = microphone;
       await microphone.connect(abort.signal);
       if (abort.signal.aborted) {

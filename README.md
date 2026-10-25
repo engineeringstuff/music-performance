@@ -41,7 +41,9 @@ Implemented:
 
 The dedicated melody track is muted in the backing; harmony can still contain the same pitch
 classes as the melody. Each track also ships a melody-only guide stem. Use wired headphones
-to stop the backing leaking into the microphone; Bluetooth adds latency.
+to stop the backing leaking into the microphone; Bluetooth adds latency. **Echo cancellation**
+is on by default for speaker use and can be turned off on the ready screen or in
+**Privacy & sound**.
 
 ## Stack
 

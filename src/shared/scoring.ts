@@ -233,7 +233,10 @@ function coverageForWindow(
       : previous
         ? frame.timeSec - previous.timeSec
         : Math.min(duration, 1 / 60);
-    const weight = Math.min(1, Math.max(0.001, gap));
+    // A stalled animation loop can leave a long gap between samples. Do not
+    // treat that gap as proof that the note was voiced; cap the sample's
+    // contribution to a little more than one 60 fps frame.
+    const weight = Math.min(0.1, Math.max(0.001, gap));
     if (frame.clarity >= clarityThreshold && frame.hz > 0) {
       voicedTime += weight;
     }

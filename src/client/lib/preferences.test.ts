@@ -44,9 +44,34 @@ afterEach(() => {
 });
 
 describe("preferences", () => {
+  it("defaults echo cancellation on and keeps legacy records working", () => {
+    expect(loadAudioSettings()).toEqual({
+      backingVolume: 0.9,
+      guideVolume: 0.22,
+      echoCancellation: true,
+    });
+
+    localStorageStub.setItem(
+      "music-performance:audio:v1",
+      JSON.stringify({ backingVolume: 0.5, guideVolume: 0.2 }),
+    );
+    expect(loadAudioSettings().echoCancellation).toBe(true);
+  });
+
   it("clamps audio and timing settings", () => {
-    saveAudioSettings({ backingVolume: 2, guideVolume: -1 });
-    expect(loadAudioSettings()).toEqual({ backingVolume: 1, guideVolume: 0 });
+    saveAudioSettings({ backingVolume: 2, guideVolume: -1, echoCancellation: true });
+    expect(loadAudioSettings()).toEqual({
+      backingVolume: 1,
+      guideVolume: 0,
+      echoCancellation: true,
+    });
+
+    saveAudioSettings({ backingVolume: 0.5, guideVolume: 0.25, echoCancellation: false });
+    expect(loadAudioSettings()).toEqual({
+      backingVolume: 0.5,
+      guideVolume: 0.25,
+      echoCancellation: false,
+    });
 
     saveLatencyOffsetMs(999);
     expect(loadLatencyOffsetMs()).toBe(250);

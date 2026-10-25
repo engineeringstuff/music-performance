@@ -29,6 +29,7 @@ const hoisted = vi.hoisted(() => {
     micInstances: [] as Array<{
       context: unknown;
       offset: number;
+      echoCancellation: boolean;
       connect: ReturnType<typeof vi.fn>;
       disconnect: ReturnType<typeof vi.fn>;
       read: ReturnType<typeof vi.fn>;
@@ -54,6 +55,7 @@ vi.mock("../audio/pitch", () => ({
     constructor(
       public context: unknown,
       public offset: number,
+      public echoCancellation = false,
     ) {
       hoisted.micInstances.push(this);
     }
@@ -69,11 +71,21 @@ vi.mock("../audio/pitch", () => ({
 }));
 
 vi.mock("../lib/preferences", () => ({
-  loadAudioSettings: vi.fn(() => ({ backingVolume: 0.4, guideVolume: 0.6 })),
+  loadAudioSettings: vi.fn(() => ({
+    backingVolume: 0.4,
+    guideVolume: 0.6,
+    echoCancellation: false,
+  })),
   loadLatencyOffsetMs: vi.fn(() => 50),
 }));
 
 import { loadPerformance } from "../audio/loadPerformance";
+import {
+  clearPitchDiagnostics,
+  readPitchDiagnostics,
+  setPitchDiagnosticsEnabled,
+} from "../lib/pitchDiagnostics";
+import { loadAudioSettings } from "../lib/preferences";
 import { usePerformance } from "./usePerformance";
 
 const track: TrackSummary = {
@@ -264,6 +276,122 @@ describe("usePerformance", () => {
     });
     expect(hook.result.current.paused).toBe(false);
     expect(context.resume).toHaveBeenCalled();
+  });
+
+  it("smooths the displayed cents and holds through a brief dropout", async () => {
+    const { hook } = await startPerformance();
+    const mic = hoisted.micInstances[0];
+    if (!mic) {
+      throw new Error("Expected a microphone source");
+    }
+    const step = async (time: number, frame = hoisted.frame) => {
+      mic.read.mockReturnValue(frame);
+      context.currentTime = time;
+      await act(async () => {
+        flushFrame();
+      });
+    };
+
+    await step(3);
+    expect(hook.result.current.currentCents).toBeCloseTo(0, 0);
+    await step(3.016);
+    await step(3.032, { ...hoisted.frame, hz: 523.2511 });
+    expect(hook.result.current.currentCents).toBeCloseTo(0, 0);
+    await step(3.048);
+    expect(hook.result.current.currentCents).toBeCloseTo(0, 0);
+
+    await step(3.064, { ...hoisted.frame, hz: 0, clarity: 0 });
+    expect(hook.result.current.currentCents).toBeCloseTo(0, 0);
+    await step(3.55, { ...hoisted.frame, hz: 0, clarity: 0 });
+    expect(hook.result.current.currentCents).toBeNull();
+  });
+
+  it("records pitch diagnostics when the opt-in is enabled", async () => {
+    setPitchDiagnosticsEnabled(true);
+    clearPitchDiagnostics();
+    try {
+      const { hook } = await startPerformance();
+      context.currentTime = 3;
+      await act(async () => {
+        flushFrame();
+      });
+      context.currentTime = 3.05;
+      await act(async () => {
+        flushFrame();
+      });
+      act(() => hook.result.current.forfeit());
+
+      const captured = readPitchDiagnostics();
+      expect(captured?.frames.length).toBeGreaterThan(0);
+      expect(captured?.meta.trackId).toBe("demo");
+      expect(captured?.frames[0]?.target).toBe(60);
+    } finally {
+      setPitchDiagnosticsEnabled(false);
+      clearPitchDiagnostics();
+    }
+  });
+
+  it("passes the echo-cancellation preference to the microphone source", async () => {
+    vi.mocked(loadAudioSettings).mockReturnValueOnce({
+      backingVolume: 0.4,
+      guideVolume: 0.6,
+      echoCancellation: true,
+    });
+    await startPerformance();
+    expect(hoisted.micInstances[0]?.echoCancellation).toBe(true);
+  });
+
+  it("uses the corrected frame time for octave calibration", async () => {
+    const { hook } = await startPerformance();
+    const mic = hoisted.micInstances[0];
+    if (!mic) {
+      throw new Error("Expected a microphone source");
+    }
+    mic.read.mockImplementation((readTime: number) => ({
+      ...hoisted.frame,
+      hz: 130.8128,
+      clarity: 1,
+      timeSec: readTime - 0.1,
+    }));
+
+    for (let index = 0; index < 20; index += 1) {
+      context.currentTime = 3.55 + index * 0.016;
+      await act(async () => {
+        flushFrame();
+      });
+    }
+
+    // The analysed C3 belongs to the previous C4 target (frame time 0.45),
+    // so it calibrates the vocal octave to the chart octave. Against the
+    // current D4 target the ball sits at C4, i.e. -200 cents.
+    expect(hook.result.current.currentIndex).toBe(1);
+    expect(hook.result.current.currentCents).toBeGreaterThan(-260);
+    expect(hook.result.current.currentCents).toBeLessThan(-140);
+  });
+
+  it("keeps the ball on the held pitch when the target note changes", async () => {
+    const { hook } = await startPerformance();
+    const mic = hoisted.micInstances[0];
+    if (!mic) {
+      throw new Error("Expected a microphone source");
+    }
+    const step = async (time: number) => {
+      mic.read.mockReturnValue(hoisted.frame);
+      context.currentTime = time;
+      await act(async () => {
+        flushFrame();
+      });
+    };
+
+    await step(3);
+    expect(hook.result.current.currentIndex).toBe(0);
+    expect(hook.result.current.currentCents).toBeCloseTo(0, 0);
+
+    // The second chart note is D4; the player is still holding C4.
+    await step(3.55);
+    expect(hook.result.current.currentIndex).toBe(1);
+    expect(hook.result.current.currentCents).toBeGreaterThan(-260);
+    expect(hook.result.current.currentCents).toBeLessThan(-140);
   });
 
   it("forfeits, disconnects and closes the context", async () => {

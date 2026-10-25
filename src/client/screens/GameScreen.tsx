@@ -4,8 +4,10 @@ import { getInstrument } from "../../shared/instruments";
 import { midiToNoteName } from "../../shared/music";
 import type { NoteEvaluation, NoteRating, ScoreBreakdown } from "../../shared/scoring";
 import { Button } from "../components/Button";
+import { pitchLaneRange, pitchLaneYPercent } from "../game/pitchDisplay";
 import { usePerformance } from "../game/usePerformance";
 import { formatClock } from "../lib/format";
+import { loadAudioSettings, saveAudioSettings } from "../lib/preferences";
 import { useReducedMotion } from "../lib/useReducedMotion";
 
 interface GameScreenProps {
@@ -54,7 +56,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function PitchLane({
+export function PitchLane({
   notes,
   timeSec,
   currentIndex,
@@ -75,19 +77,10 @@ function PitchLane({
   const laneEnd = timeSec + laneAfterSec;
   const currentNote = currentIndex === null ? null : notes[currentIndex];
 
-  const range = useMemo(() => {
-    if (notes.length === 0) {
-      return { minMidi: 48, maxMidi: 84 };
-    }
-    const midis = notes.map((note) => note.midi);
-    const minMidi = Math.min(...midis) - 3;
-    const maxMidi = Math.max(...midis) + 3;
-    return { minMidi, maxMidi: Math.max(maxMidi, minMidi + 12) };
-  }, [notes]);
+  const range = useMemo(() => pitchLaneRange(notes), [notes]);
 
   const xPercent = (seconds: number) => ((seconds - laneStart) / laneSpanSec) * 100;
-  const yPercent = (midi: number) =>
-    ((range.maxMidi - midi) / (range.maxMidi - range.minMidi)) * 100;
+  const yPercent = (midi: number) => pitchLaneYPercent(midi, range);
   const playheadPercent = (LANE_BEFORE_SEC / laneSpanSec) * 100;
 
   if (reducedMotion) {
@@ -200,16 +193,25 @@ function PitchLane({
         );
       })}
 
-      {currentNote && currentCents !== null && (
-        <div
-          aria-hidden="true"
-          className="absolute z-10 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_16px_rgba(255,255,255,0.9)]"
-          style={{
-            left: `${playheadPercent}%`,
-            top: `${clamp(yPercent(currentNote.midi + currentCents / 100), 0, 100)}%`,
-          }}
-        />
-      )}
+      {currentNote &&
+        currentCents !== null &&
+        (() => {
+          const rawTop = yPercent(currentNote.midi + currentCents / 100);
+          const outOfRange = rawTop < 0 || rawTop > 100;
+          return (
+            <div
+              aria-hidden="true"
+              data-testid="pitch-ball"
+              className={`absolute z-10 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_16px_rgba(255,255,255,0.9)] ${
+                outOfRange ? "ring-2 ring-amber-300/80" : ""
+              }`}
+              style={{
+                left: `${playheadPercent}%`,
+                top: `${Math.max(2, Math.min(98, rawTop))}%`,
+              }}
+            />
+          );
+        })()}
     </div>
   );
 }
@@ -251,6 +253,9 @@ export function GameScreen({
   const performance = usePerformance({ config, track, onFinish, onForfeit });
   const reducedMotion = useReducedMotion();
   const [dialogMode, setDialogMode] = useState<"forfeit" | "pause" | null>(null);
+  const [echoCancellation, setEchoCancellation] = useState(
+    () => loadAudioSettings().echoCancellation,
+  );
   const dialogRef = useRef<HTMLDialogElement>(null);
   const forfeitButtonRef = useRef<HTMLButtonElement>(null);
   const pauseButtonRef = useRef<HTMLButtonElement>(null);
@@ -322,6 +327,12 @@ export function GameScreen({
     }
     setDialogMode("pause");
     pause();
+  };
+
+  const handleEchoCancellation = (enabled: boolean) => {
+    const settings = loadAudioSettings();
+    saveAudioSettings({ ...settings, echoCancellation: enabled });
+    setEchoCancellation(enabled);
   };
 
   const handleKeepPlaying = () => {
@@ -705,10 +716,28 @@ export function GameScreen({
           <p className="mt-4 text-sm leading-relaxed text-stage-300">
             The backing track starts after a short countdown. Keep the tab visible and use wired
             headphones if you can, so the backing does not reach the microphone. Bluetooth adds
-            latency.
+            latency. Echo cancellation is on by default to reduce speaker bleed.
           </p>
         </div>
       </div>
+
+      {config.inputMode !== "midi" && (
+        <label className="mx-auto mt-6 flex max-w-xl items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-left text-sm">
+          <input
+            type="checkbox"
+            checked={echoCancellation}
+            onChange={(event) => handleEchoCancellation(event.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-emerald-400"
+          />
+          <span>
+            <span className="font-medium text-slate-100">Echo cancellation</span>
+            <span className="mt-1 block text-xs leading-relaxed text-stage-300">
+              On by default to reduce backing bleed through speakers. Turn it off with headphones if
+              sustained notes sound thin.
+            </span>
+          </span>
+        </label>
+      )}
 
       <div className="mt-9 flex flex-col items-center gap-5">
         <Button

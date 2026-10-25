@@ -50,8 +50,23 @@ describe("SettingsScreen", () => {
     fireEvent.change(guide, { target: { value: "75" } });
     fireEvent.change(offset, { target: { value: "-50" } });
 
+    const echoCancellation = screen.getByRole("checkbox", { name: /Echo cancellation/ });
+    expect((echoCancellation as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(echoCancellation);
+
     expect(window.localStorage.getItem("music-performance:audio:v1")).toContain("0.25");
+    expect(window.localStorage.getItem("music-performance:audio:v1")).toContain(
+      '"echoCancellation":false',
+    );
     expect(window.localStorage.getItem("music-performance:latency:v1")).toContain("-50");
+  });
+
+  it("persists the pitch diagnostics opt-in", () => {
+    render(<SettingsScreen onBack={vi.fn()} onCleared={vi.fn()} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: /Record the next performance/ }));
+    expect(window.localStorage.getItem("music-performance:pitch-diagnostics:enabled:v1")).toBe(
+      "true",
+    );
   });
 
   it("reports a partial clear failure without navigating away", async () => {

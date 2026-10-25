@@ -5,11 +5,13 @@ const DIAGNOSTICS_KEY = "music-performance:diagnostics:v1";
 export interface AudioSettings {
   backingVolume: number;
   guideVolume: number;
+  echoCancellation: boolean;
 }
 
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   backingVolume: 0.9,
   guideVolume: 0.22,
+  echoCancellation: true,
 };
 
 export interface DiagnosticEntry {
@@ -50,6 +52,10 @@ export function loadAudioSettings(): AudioSettings {
   return {
     backingVolume: clampVolume(record.backingVolume, DEFAULT_AUDIO_SETTINGS.backingVolume),
     guideVolume: clampVolume(record.guideVolume, DEFAULT_AUDIO_SETTINGS.guideVolume),
+    echoCancellation:
+      typeof record.echoCancellation === "boolean"
+        ? record.echoCancellation
+        : DEFAULT_AUDIO_SETTINGS.echoCancellation,
   };
 }
 
@@ -57,6 +63,7 @@ export function saveAudioSettings(settings: AudioSettings): void {
   writeLocalJson(AUDIO_KEY, {
     backingVolume: clampVolume(settings.backingVolume, DEFAULT_AUDIO_SETTINGS.backingVolume),
     guideVolume: clampVolume(settings.guideVolume, DEFAULT_AUDIO_SETTINGS.guideVolume),
+    echoCancellation: settings.echoCancellation === true,
   });
 }
 

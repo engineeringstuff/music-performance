@@ -3,6 +3,14 @@ import { midiToFrequency } from "../../shared/music";
 import type { PitchFrame } from "../../shared/scoring";
 
 export const PITCH_WINDOW_SIZE = 4096;
+export const MIN_DETECTED_HZ = 50;
+export const MAX_DETECTED_HZ = 2000;
+
+// RMS threshold. pitchy's `minVolumeDecibels` uses a power ratio (10^(dB/10)),
+// so the old -50 value became an effective -100 dBFS gate. Setting the
+// absolute RMS is unambiguous and rejects room rumble/quiet bleed.
+const MIN_VOLUME_RMS = 0.0015;
+const DETECTOR_CLARITY = 0.9;
 
 export class MicrophoneError extends Error {
   constructor(message: string) {
@@ -45,14 +53,14 @@ function microphoneErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Could not start the microphone.";
 }
 
-async function requestMicrophone(): Promise<MediaStream> {
+async function requestMicrophone(echoCancellation: boolean): Promise<MediaStream> {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new MicrophoneError("Microphone access is not available in this browser.");
   }
 
   const preferred: MediaStreamConstraints = {
     audio: {
-      echoCancellation: false,
+      echoCancellation,
       noiseSuppression: false,
       autoGainControl: false,
       channelCount: 1,
@@ -64,7 +72,13 @@ async function requestMicrophone(): Promise<MediaStream> {
   } catch (error) {
     if (error instanceof DOMException && error.name === "OverconstrainedError") {
       try {
-        return await navigator.mediaDevices.getUserMedia({ audio: true });
+        return await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
+        });
       } catch (fallbackError) {
         throw new MicrophoneError(microphoneErrorMessage(fallbackError));
       }
@@ -111,8 +125,18 @@ export function rootMeanSquare(samples: Float32Array): number {
  * `connect` is abort-aware: if the caller cancels while the permission prompt
  * or device initialization is pending, the newly acquired stream is stopped
  * before the rejection escapes.
+ *
+ * Echo cancellation is configurable and enabled by default in the app. It is
+ * the practical option for speakers because the browser can subtract the
+ * backing track from the mic signal; headphones avoid the bleed entirely.
  */
+export interface MicrophoneDiagnostics {
+  deviceLabel: string | null;
+  applied: Record<string, boolean | number | null>;
+}
+
 export class MicrophonePitchSource implements PitchSource {
+  diagnostics: MicrophoneDiagnostics = { deviceLabel: null, applied: {} };
   private readonly detector: PitchDetector<Float32Array>;
   private readonly sampleRate: number;
   private readonly buffer = new Float32Array(PITCH_WINDOW_SIZE);
@@ -124,11 +148,12 @@ export class MicrophonePitchSource implements PitchSource {
   constructor(
     private readonly context: AudioContext,
     private readonly extraLatencyOffsetSec = 0,
+    private readonly echoCancellation = false,
   ) {
     this.sampleRate = context.sampleRate;
     this.detector = PitchDetector.forFloat32Array(PITCH_WINDOW_SIZE);
-    this.detector.clarityThreshold = 0.75;
-    this.detector.minVolumeDecibels = -50;
+    this.detector.clarityThreshold = DETECTOR_CLARITY;
+    this.detector.minVolumeAbsolute = MIN_VOLUME_RMS;
   }
 
   async connect(signal?: AbortSignal): Promise<void> {
@@ -137,7 +162,7 @@ export class MicrophonePitchSource implements PitchSource {
       throw new DOMException("Microphone startup was cancelled", "AbortError");
     }
 
-    const stream = await requestMicrophone();
+    const stream = await requestMicrophone(this.echoCancellation);
     if (signal?.aborted) {
       stopStream(stream);
       throw new DOMException("Microphone startup was cancelled", "AbortError");
@@ -151,6 +176,20 @@ export class MicrophonePitchSource implements PitchSource {
         | undefined;
       const latency = settings?.latency;
       this.inputLatencySec = typeof latency === "number" && Number.isFinite(latency) ? latency : 0;
+      const rawSettings = (settings ?? {}) as Record<string, unknown>;
+      this.diagnostics = {
+        deviceLabel: typeof track?.label === "string" && track.label ? track.label : null,
+        applied: {
+          echoCancellation:
+            typeof rawSettings.echoCancellation === "boolean" ? rawSettings.echoCancellation : null,
+          noiseSuppression:
+            typeof rawSettings.noiseSuppression === "boolean" ? rawSettings.noiseSuppression : null,
+          autoGainControl:
+            typeof rawSettings.autoGainControl === "boolean" ? rawSettings.autoGainControl : null,
+          sampleRate: typeof rawSettings.sampleRate === "number" ? rawSettings.sampleRate : null,
+          latency: typeof latency === "number" && Number.isFinite(latency) ? latency : null,
+        },
+      };
       this.source = this.context.createMediaStreamSource(stream);
       this.analyser = this.context.createAnalyser();
       this.analyser.fftSize = PITCH_WINDOW_SIZE;
@@ -173,10 +212,11 @@ export class MicrophonePitchSource implements PitchSource {
     }
     this.analyser.getFloatTimeDomainData(this.buffer);
     const [hz, clarity] = this.detector.findPitch(this.buffer, this.sampleRate);
+    const inRange = Number.isFinite(hz) && hz >= MIN_DETECTED_HZ && hz <= MAX_DETECTED_HZ;
     return {
       timeSec: frameTime,
-      hz: Number.isFinite(hz) ? hz : 0,
-      clarity: Number.isFinite(clarity) ? Math.max(0, Math.min(1, clarity)) : 0,
+      hz: inRange ? hz : 0,
+      clarity: inRange && Number.isFinite(clarity) ? Math.max(0, Math.min(1, clarity)) : 0,
       level: rootMeanSquare(this.buffer),
     };
   }

@@ -9,20 +9,28 @@ import type {
   TrackSummary,
 } from "../../shared/domain";
 import { getInstrument } from "../../shared/instruments";
-import { midiToFrequency } from "../../shared/music";
+import { frequencyToMidi } from "../../shared/music";
 import type { ScoreBreakdown } from "../../shared/scoring";
-import {
-  DEFAULT_SCORING,
-  foldOctaveCents,
-  type PitchFrame,
-  scorePerformance,
-} from "../../shared/scoring";
+import { DEFAULT_SCORING, type PitchFrame, scorePerformance } from "../../shared/scoring";
 import { loadPerformance } from "../audio/loadPerformance";
 import { MicrophonePitchSource, MidiPitchSource, type PitchSource } from "../audio/pitch";
+import {
+  flushPitchDiagnostics,
+  recordPitchFrame,
+  startPitchDiagnostics,
+} from "../lib/pitchDiagnostics";
 import { loadAudioSettings, loadLatencyOffsetMs } from "../lib/preferences";
+import {
+  INITIAL_PITCH_DISPLAY,
+  pitchLaneRange,
+  pitchLaneYPercent,
+  updatePitchDisplay,
+} from "./pitchDisplay";
 
 const COUNTDOWN_SECONDS = 3;
-const SCORE_UPDATE_INTERVAL = 0.2;
+const DISPLAY_CLARITY_THRESHOLD = 0.5;
+const SCORE_UPDATE_INTERVAL = 0.4;
+const NEXT_NOTE_PREROLL_SEC = 0.5;
 const FINISH_GRACE_SEC = 0.25;
 
 export type PerformancePhase =
@@ -70,7 +78,7 @@ const INITIAL_STATE: PerformanceState = {
   fit: null,
 };
 
-function findNoteIndex(notes: readonly TargetNote[], timeSec: number): number | null {
+export function findNoteIndex(notes: readonly TargetNote[], timeSec: number): number | null {
   if (notes.length === 0) {
     return null;
   }
@@ -80,19 +88,15 @@ function findNoteIndex(notes: readonly TargetNote[], timeSec: number): number | 
     }
   }
   for (const [index, note] of notes.entries()) {
-    if (note.startSec > timeSec) {
+    if (note.startSec > timeSec && note.startSec - timeSec <= NEXT_NOTE_PREROLL_SEC) {
       return index;
     }
   }
   const last = notes[notes.length - 1];
-  if (last && timeSec > last.startSec + last.durationSec + 0.5) {
-    return null;
+  if (last && timeSec >= last.startSec && timeSec <= last.startSec + last.durationSec + 0.5) {
+    return notes.length - 1;
   }
-  return notes.length - 1;
-}
-
-function centsFromFrame(frame: PitchFrame, targetMidi: number): number {
-  return 1200 * Math.log2(frame.hz / midiToFrequency(targetMidi));
+  return null;
 }
 
 function scheduleCountIn(context: AudioContext, startTime: number): void {
@@ -119,6 +123,8 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
   const animationRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const framesRef = useRef<PitchFrame[]>([]);
+  const pitchDisplayRef = useRef(INITIAL_PITCH_DISPLAY);
+  const laneRangeRef = useRef(pitchLaneRange([]));
   const startTimeRef = useRef(0);
   const durationRef = useRef(0);
   const notesRef = useRef<TargetNote[]>([]);
@@ -161,6 +167,9 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
     activeRef.current = false;
     pausedRef.current = false;
     framesRef.current = [];
+    pitchDisplayRef.current = INITIAL_PITCH_DISPLAY;
+    laneRangeRef.current = pitchLaneRange([]);
+    flushPitchDiagnostics();
     setPaused(false);
   }, []);
 
@@ -262,7 +271,7 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
       pitchSource =
         config.inputMode === "midi"
           ? new MidiPitchSource(latencyMs / 1000)
-          : new MicrophonePitchSource(context, latencyMs / 1000);
+          : new MicrophonePitchSource(context, latencyMs / 1000, audioSettings.echoCancellation);
       pitchSourceRef.current = pitchSource;
 
       const keyTranspose = config.keyTransposeSemitones ?? config.transposeSemitones;
@@ -298,6 +307,7 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
 
       fitRef.current = fit;
       notesRef.current = notes;
+      laneRangeRef.current = pitchLaneRange(notes);
       framesRef.current = [];
       startTimeRef.current = contextStart;
       durationRef.current = performanceDuration;
@@ -333,6 +343,24 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
         stopPlayback();
         return;
       }
+
+      const micDiagnostics =
+        pitchSource instanceof MicrophonePitchSource ? pitchSource.diagnostics : null;
+      startPitchDiagnostics({
+        trackId: track.id,
+        instrumentId: config.instrumentId,
+        inputMode: config.inputMode ?? "microphone",
+        keyTranspose,
+        fitSemitones: fit.semitones,
+        guideEnabled: config.guideEnabled,
+        echoCancellationRequested: audioSettings.echoCancellation,
+        latencyOffsetMs: latencyMs,
+        laneMinMidi: laneRangeRef.current.minMidi,
+        laneMaxMidi: laneRangeRef.current.maxMidi,
+        deviceLabel: micDiagnostics?.deviceLabel ?? null,
+        applied: micDiagnostics?.applied ?? null,
+        userAgent: typeof navigator === "undefined" ? "" : navigator.userAgent,
+      });
 
       setState({
         ...INITIAL_STATE,
@@ -383,17 +411,51 @@ export function usePerformance({ config, track, onFinish, onForfeit }: UsePerfor
         framesRef.current.push(frame);
         const noteIndex = findNoteIndex(notesRef.current, elapsed);
         const note = noteIndex === null ? null : notesRef.current[noteIndex];
-        let cents: number | null = null;
-        if (note && frame.hz > 0 && frame.clarity >= DEFAULT_SCORING.clarityThreshold) {
-          const raw = centsFromFrame(frame, note.midi);
-          cents = config.instrumentId === "vocals" ? foldOctaveCents(raw) : raw;
+        const calibrationIndex = findNoteIndex(notesRef.current, frame.timeSec);
+        const calibrationNote =
+          calibrationIndex === null ? null : notesRef.current[calibrationIndex];
+        let detectedMidi: number | null = null;
+        if (frame.hz > 0 && frame.clarity >= DISPLAY_CLARITY_THRESHOLD) {
+          detectedMidi = frequencyToMidi(frame.hz);
         }
+
+        const display = updatePitchDisplay(
+          pitchDisplayRef.current,
+          detectedMidi,
+          calibrationNote?.midi ?? note?.midi ?? 0,
+          config.instrumentId === "vocals",
+          elapsed,
+        );
+        pitchDisplayRef.current = display;
+        const currentCents =
+          note && display.midi !== null ? (display.midi - note.midi) * 100 : null;
+        const ballTop =
+          note && display.midi !== null
+            ? pitchLaneYPercent(display.midi, laneRangeRef.current)
+            : null;
+        recordPitchFrame({
+          t: Number(elapsed.toFixed(3)),
+          ft: Number(frame.timeSec.toFixed(3)),
+          hz: Number(frame.hz.toFixed(2)),
+          clarity: Number(frame.clarity.toFixed(3)),
+          level: Number(frame.level.toFixed(4)),
+          target: note?.midi ?? null,
+          calibration: calibrationNote?.midi ?? null,
+          display: display.midi === null ? null : Number(display.midi.toFixed(4)),
+          octaveShift: display.octaveShift,
+          octaveVotes: display.octaveVotes.length,
+          cents: currentCents === null ? null : Number(currentCents.toFixed(1)),
+          ball: ballTop !== null,
+          y: ballTop === null ? null : Number(ballTop.toFixed(2)),
+          clampedY: ballTop === null ? null : Number(Math.max(2, Math.min(98, ballTop)).toFixed(2)),
+          outOfRange: ballTop !== null && (ballTop < 0 || ballTop > 100),
+        });
 
         setState((current) => ({
           ...current,
           timeSec: Math.min(elapsed, durationRef.current),
           currentIndex: noteIndex,
-          currentCents: cents,
+          currentCents,
         }));
 
         if (elapsed - lastScoreAtRef.current >= SCORE_UPDATE_INTERVAL) {

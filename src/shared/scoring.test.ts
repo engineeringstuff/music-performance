@@ -348,17 +348,29 @@ describe("MIDI onset matching", () => {
 });
 
 describe("scoring boundaries", () => {
-  it("keeps coverage meaningful at a low frame rate", () => {
+  it("keeps coverage meaningful at a low but steady frame rate", () => {
     const slowNote: TargetNote = { startSec: 0, durationSec: 2, midi: 69 };
-    const frames: PitchFrame[] = [0, 1, 2].map((timeSec) => ({
-      timeSec,
+    const frames: PitchFrame[] = Array.from({ length: 21 }, (_, index) => ({
+      timeSec: index * 0.1,
       hz: midiToFrequency(69),
       clarity: 1,
       level: 0.5,
     }));
     const result = evaluateNote(slowNote, 0, frames);
-    expect(result.coverage).toBeCloseTo(1, 3);
+    expect(result.coverage).toBeCloseTo(1, 2);
     expect(result.score).toBeGreaterThan(90);
+  });
+
+  it("does not credit a long stalled gap as voiced", () => {
+    const note: TargetNote = { startSec: 0, durationSec: 2, midi: 69 };
+    const frames: PitchFrame[] = [0, 1].map((timeSec) => ({
+      timeSec,
+      hz: midiToFrequency(69),
+      clarity: 1,
+      level: 0.5,
+    }));
+    const result = evaluateNote(note, 0, frames);
+    expect(result.coverage).toBeLessThan(0.2);
   });
 
   it("applies a two-octave fit when required", () => {

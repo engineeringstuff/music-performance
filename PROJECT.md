@@ -100,7 +100,8 @@ assets and charts must return real 404s rather than `index.html`.
 `PitchSource` abstracts the two input methods in `src/client/audio/pitch.ts`:
 
 - **Microphone:** `getUserMedia` plus a 4096-sample analyser and `pitchy` (McLeod Pitch
-  Method). Echo cancellation, noise suppression and AGC are disabled.
+  Method). Noise suppression and AGC are disabled. Echo cancellation is on by default to
+  reduce speaker bleed and can be turned off for headphones.
 - **Web MIDI:** note-on/off messages are turned into frames with an explicit onset flag, so
   repeated notes can be distinguished from a held tone.
 
